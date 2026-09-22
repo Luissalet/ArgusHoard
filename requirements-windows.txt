@@ -1,0 +1,5 @@
+# Windows extras: install after requirements.txt (venv\Scripts\pip install -r requirements-windows.txt).
+# pywin32 is optional (the window backend uses ctypes); winocr enables the fast Windows.Media.Ocr engine.
+-r requirements.txt
+pywin32>=306
+winocr>=0.0.13

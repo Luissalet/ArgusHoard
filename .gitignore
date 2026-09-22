@@ -1,0 +1,15 @@
+node_modules/
+argus/static/
+dist/
+data/
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+.env.*
+!.env.example
+*.log
+scripts/selftest.webp
+scripts/selftest.t.webp
