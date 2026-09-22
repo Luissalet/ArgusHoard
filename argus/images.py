@@ -2,11 +2,13 @@
 
 Two measures, both Pillow/numpy only:
 - `dhash` (16x16 difference hash, 256 bits) is stored per frame as `phash`.
-- `signature` (a 192x108 grey grid) is kept in memory for the previous frame of
+- `signature` (a 384x216 grey grid, 5x5 px cells at 1080p) is kept in memory for the previous frame of
   each monitor; `changed_cells` counts cells whose grey level moved by more than
   `LEVEL`. A whole-screen hash is too coarse for text: a caret blink and a new
   line of text differ by the same 1-2 bits, whereas on the grid a caret or the
-  clock changes 2-4 cells and a new line of text 10+ (measured on fixtures).
+  clock changes 4-10 cells and a new line of 16 px text 25+ (measured on
+  fixtures with both DejaVu and Segoe UI; Segoe's thinner strokes are why the
+  grid is this fine and the level this low).
 """
 
 from __future__ import annotations
@@ -17,8 +19,8 @@ import numpy as np
 from PIL import Image
 
 HASH_SIZE = 16  # 16x16 differences -> 256 bits
-GRID = (192, 108)
-LEVEL = 16  # grey-level delta that counts as a changed cell
+GRID = (384, 216)
+LEVEL = 12  # grey-level delta that counts as a changed cell
 
 
 def dhash(image: Image.Image, size: int = HASH_SIZE) -> str:

@@ -18,7 +18,10 @@ class UnavailableCapture(CaptureBackend):
     def __init__(self, reason: str):
         self.reason = reason
 
-    def grab(self, all_monitors: bool = True) -> list[Grab]:
+    def monitors(self) -> list:
+        return []
+
+    def grab(self, monitors: list[int] | None = None) -> list[Grab]:
         raise RuntimeError(self.reason)
 
 

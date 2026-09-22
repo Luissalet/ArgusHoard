@@ -54,6 +54,7 @@ class FixtureScene:
     lines: list[str]
     repeat: int = 1  # how many consecutive ticks this scene stays on screen
     size: tuple[int, int] = (1280, 720)
+    monitor: int = 1  # which fake monitor the window sits on
     image: Image.Image | None = field(default=None, repr=False)
 
     def render(self) -> Image.Image:
@@ -62,10 +63,25 @@ class FixtureScene:
         return self.image
 
 
+# Two fake monitors side by side, both 1280x720; the second one is the primary's neighbour.
+FAKE_MONITORS: list[tuple[int, int, int, int, bool]] = [(1, 0, 0, 1280, 720, True), (2, 1280, 0, 1280, 720, False)]
+
+
+def render_idle_monitor(index: int) -> Image.Image:
+    """What a monitor without the active window shows: a static desktop."""
+    return render_screen([f"Escritorio del monitor {index}", "Sin ventana activa"], title_bar="Escritorio")
+
+
 DEFAULT_SCENES: list[FixtureScene] = [
     FixtureScene("editor", "notas.txt - Editor de texto", ["Lista de la compra", "Pan integral y tomates", "Llamar al fontanero el martes"], repeat=3),
     FixtureScene("navegador", "Receta de paella - Navegador", ["Receta de paella valenciana", "Arroz bomba 400 gramos", "Azafran y pimenton dulce"], repeat=2),
     FixtureScene("terminal", "Terminal", ["Traceback (most recent call last):", "KeyError: 'presupuesto'", "Proceso terminado con error 1"], repeat=2),
     FixtureScene("hoja", "Presupuesto 2026 - Hojas", ["Presupuesto mensual 2026", "Alquiler 850", "Comida 320", "Transporte 60"], repeat=4),
     FixtureScene("banco", "Banco Ficticio - Navegador", ["Cuenta corriente", "Saldo disponible 1234", "Movimientos recientes"], repeat=2),
+]
+
+MULTI_MONITOR_SCENES: list[FixtureScene] = [
+    FixtureScene("editor", "notas.txt - Editor de texto", ["Lista de la compra", "Pan integral y tomates"], repeat=2, monitor=1),
+    FixtureScene("navegador", "Receta de paella - Navegador", ["Receta de paella valenciana", "Arroz bomba 400 gramos"], repeat=2, monitor=2),
+    FixtureScene("terminal", "Terminal", ["Traceback (most recent call last):", "KeyError: 'presupuesto'"], repeat=2, monitor=1),
 ]

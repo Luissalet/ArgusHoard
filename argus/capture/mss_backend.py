@@ -12,7 +12,7 @@ import threading
 
 from PIL import Image
 
-from .base import CaptureBackend, Grab
+from .base import CaptureBackend, Grab, Monitor
 
 
 class MssCapture(CaptureBackend):
@@ -21,7 +21,7 @@ class MssCapture(CaptureBackend):
     def __init__(self):
         import mss  # imported lazily: it touches the display on construction
 
-        self._mss_module = mss
+        self._factory = getattr(mss, "MSS", None) or mss.mss  # `mss.mss` is deprecated in 10.x
         self._local = threading.local()
         self._instances: list = []
         self._instance()  # probe: raises when capture is impossible here
@@ -29,22 +29,28 @@ class MssCapture(CaptureBackend):
     def _instance(self):
         sct = getattr(self._local, "sct", None)
         if sct is None:
-            sct = self._mss_module.mss()
+            sct = self._factory()
             self._local.sct = sct
             self._instances.append(sct)
         return sct
 
-    def grab(self, all_monitors: bool = True) -> list[Grab]:
+    def monitors(self) -> list[Monitor]:
+        raw = self._instance().monitors  # [0] = virtual screen, [1..] = physical
+        physical = raw[1:] if len(raw) > 1 else raw
+        return [
+            Monitor(index=i, left=m["left"], top=m["top"], width=m["width"], height=m["height"], primary=(m["left"] == 0 and m["top"] == 0))
+            for i, m in enumerate(physical, start=1)
+        ]
+
+    def grab(self, monitors: list[int] | None = None) -> list[Grab]:
         sct = self._instance()
-        monitors = sct.monitors  # [0] = virtual screen, [1..] = physical
-        if len(monitors) <= 1:
-            targets = [(1, monitors[0])]
-        elif all_monitors:
-            targets = list(enumerate(monitors))[1:]
-        else:
-            targets = [(1, monitors[1])]
+        raw = sct.monitors
+        physical = raw[1:] if len(raw) > 1 else raw
+        wanted = set(monitors) if monitors else None
         grabs = []
-        for index, mon in targets:
+        for index, mon in enumerate(physical, start=1):
+            if wanted is not None and index not in wanted:
+                continue
             shot = sct.grab(mon)
             image = Image.frombytes("RGB", shot.size, shot.bgra, "raw", "BGRX")
             grabs.append(Grab(monitor=index, image=image, left=mon["left"], top=mon["top"]))

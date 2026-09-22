@@ -20,9 +20,25 @@ def timeline(
     limit: int = Query(60, ge=1, le=500),
     cursor: float | None = None,
     order: str = Query("desc", pattern="^(asc|desc)$"),
+    title: str | None = Query(None, max_length=1000),
 ):
     lo, hi = epoch_range(from_, to)
-    return services(request).queries.timeline(lo, hi, app, q, limit, cursor, ascending=order == "asc")
+    return services(request).queries.timeline(lo, hi, app, q, limit, cursor, ascending=order == "asc", title=title)
+
+
+@router.get("/sessions")
+def sessions(
+    request: Request,
+    day: str | None = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    from_: str | None = Query(None, alias="from"),
+    to: str | None = None,
+    app: str | None = Query(None, max_length=200),
+):
+    if not day and not from_ and not to:
+        raise HTTPException(400, "Give a day (YYYY-MM-DD) or a from/to range.")
+    lo, hi = epoch_range(from_, to)
+    items = services(request).queries.sessions(day, lo, hi, app)
+    return {"sessions": items, "total_seconds": round(sum(s["duration_s"] for s in items)), "frames": sum(s["count"] for s in items)}
 
 
 @router.get("/frames/{frame_id}")

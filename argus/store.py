@@ -28,6 +28,7 @@ class Block:
 class LastFrame:
     id: int
     phash: str
+    captured_at: float
     until_at: float
     window_title: str
     app: str
@@ -42,10 +43,12 @@ class FrameStore:
     def last_frame(self, monitor: int) -> LastFrame | None:
         with self.db.lock:
             row = self.db.conn.execute(
-                "SELECT id, phash, until_at, window_title, app FROM frames WHERE monitor = ? ORDER BY captured_at DESC LIMIT 1",
+                "SELECT id, phash, captured_at, until_at, window_title, app FROM frames WHERE monitor = ? ORDER BY captured_at DESC LIMIT 1",
                 (monitor,),
             ).fetchone()
-        return LastFrame(row["id"], row["phash"], row["until_at"], row["window_title"], row["app"]) if row else None
+        if row is None:
+            return None
+        return LastFrame(row["id"], row["phash"], row["captured_at"], row["until_at"], row["window_title"], row["app"])
 
     def extend_frame(self, frame_id: int, until_at: float) -> None:
         with self.db.lock:

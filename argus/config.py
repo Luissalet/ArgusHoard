@@ -6,6 +6,8 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .guard import parse_allowed_hosts
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_PORT = 5183
 
@@ -24,6 +26,7 @@ class Config:
     capture_backend: str = "auto"  # auto | mss | fake | none
     window_backend: str = "auto"  # auto | windows | fake | none
     autostart: bool = True  # start the recorder thread with the app
+    allowed_hosts: tuple[str, ...] = ()  # extra Host values (exact or *.suffix) besides localhost
     data_dir_configured: bool = False
 
     @property
@@ -55,5 +58,6 @@ class Config:
             capture_backend=_env("ARGUS_CAPTURE", "auto") or "auto",
             window_backend=_env("ARGUS_WINDOW", "auto") or "auto",
             autostart=_env("ARGUS_AUTOSTART", "1") != "0",
+            allowed_hosts=parse_allowed_hosts(_env("ARGUS_ALLOWED_HOSTS")),
             data_dir_configured=bool(raw_dir),
         )

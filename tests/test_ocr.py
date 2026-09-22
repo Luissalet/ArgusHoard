@@ -33,9 +33,16 @@ def test_rapidocr_reads_every_fixture_scene(rapid):
 
 
 def test_select_ocr_falls_back_to_rapidocr():
-    engine, notes = select_ocr("winocr")  # Windows-only engine requested off Windows
-    assert engine.name in ("rapidocr", "tesseract")
-    assert any("winocr" in n for n in notes)
+    """An engine that cannot run here is skipped with a note; the request is
+    still honoured where it can be (winocr on Windows with the package)."""
+    from argus.ocr.winocr_backend import WinOcr
+
+    engine, notes = select_ocr("winocr")
+    if WinOcr.available()[0]:
+        assert engine.name == "winocr" and notes == []
+    else:
+        assert engine.name in ("rapidocr", "tesseract")
+        assert any("winocr" in n for n in notes)
 
 
 def test_join_blocks_reading_order():

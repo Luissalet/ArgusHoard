@@ -8,6 +8,7 @@ import time
 from dataclasses import dataclass, field
 
 from .capture import Backends
+from .capture.base import primary_index
 from .exclusions import first_match
 from .images import dhash, is_near_duplicate, signature
 from .settings import SettingsStore
@@ -23,6 +24,8 @@ class TickResult:
     extended: list[int] = field(default_factory=list)
     hidden: bool = False
     skipped_reason: str | None = None
+    monitors: list[int] = field(default_factory=list)  # monitors captured this tick
+    active_monitor: int | None = None
 
 
 class Recorder:
@@ -48,6 +51,8 @@ class Recorder:
         self.last_error: str | None = None
         self.last_tick: TickResult | None = None
         self.ticks = 0
+        self.idle_since: float | None = None  # captured_at of the frame the active monitor keeps repeating
+        self.active_monitor: int | None = None
         self._last_signature: dict[int, tuple[int, object]] = {}  # monitor -> (frame id, grid signature)
 
     # ---------- lifecycle ----------
@@ -88,7 +93,9 @@ class Recorder:
         while not self._stop.is_set():
             settings = self.settings.get()
             started = time.monotonic()
-            if self.state() == "watching":
+            if self.state() != "watching":
+                self.idle_since = None
+            else:
                 try:
                     self.tick()
                     self.last_error = None
@@ -118,12 +125,20 @@ class Recorder:
             self.frames.record_tick(now, hidden=True)
             result.hidden = True
             result.skipped_reason = f"excluded by {rule.kind} rule {rule.pattern!r}"
+            self.idle_since = None
             self.last_capture_at = now
             self.last_tick = result
             return result
-        grabs = self.backends.capture.grab(settings.all_monitors)
+        monitors = self.backends.capture.monitors()
+        active_monitor = window.monitor_index(monitors)
+        if active_monitor is None and monitors:
+            active_monitor = primary_index(monitors)  # unknown window position: assume the primary
+        wanted = None if settings.capture_scope == "all" or active_monitor is None else [active_monitor]
+        grabs = self.backends.capture.grab(wanted)
         self.last_capture_at = now
-        active_monitor = window.monitor_index(grabs)
+        self.active_monitor = active_monitor
+        result.active_monitor = active_monitor
+        result.monitors = [g.monitor for g in grabs]
         for grab in grabs:
             on_this_monitor = active_monitor is None or active_monitor == grab.monitor
             app = window.app if on_this_monitor else ""
@@ -137,7 +152,11 @@ class Recorder:
             if recent and same_window and is_near_duplicate(previous_signature, current, settings.dedupe_threshold):
                 self.frames.extend_frame(previous.id, now + settings.interval_s)
                 result.extended.append(previous.id)
+                if on_this_monitor:
+                    self.idle_since = previous.captured_at  # nothing changed since that frame was stored
                 continue
+            if on_this_monitor:
+                self.idle_since = None
             frame_id = self.frames.insert_frame(
                 grab.image,
                 captured_at=now,

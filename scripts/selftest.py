@@ -20,8 +20,10 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from argus.capture import select_backends  # noqa: E402
+from argus.capture.base import primary_index  # noqa: E402
 from argus.images import changed_cells, dhash, save_frame_images, signature  # noqa: E402
 from argus.ocr import ocr_availability, select_ocr  # noqa: E402
+from argus.settings import Settings  # noqa: E402
 
 
 def main(argv: list[str]) -> int:
@@ -39,22 +41,27 @@ def main(argv: list[str]) -> int:
     window = backends.window.active()
     print(f"active window: app={window.app!r} title={window.title!r} pid={window.pid} rect={window.rect}")
     try:
-        grabs = backends.capture.grab(all_monitors=True)
+        monitors = backends.capture.monitors()
+        print("monitors: " + ", ".join(f"#{m.index} {m.width}x{m.height} at ({m.left},{m.top}){' primary' if m.primary else ''}" for m in monitors))
+        active = window.monitor_index(monitors)
+        print(f"active window is on monitor: {active} (capture_scope=active would grab only #{active or primary_index(monitors)})")
+        grabs = backends.capture.grab(None)  # every monitor, to time the worst case
     except Exception as error:
         print(f"capture FAILED: {error}")
         return 1
     grab_ms = (time.perf_counter() - started) * 1000
     print(f"captured {len(grabs)} monitor(s) in {grab_ms:.0f} ms: " + ", ".join(f"#{g.monitor} {g.image.width}x{g.image.height}" for g in grabs))
-    active = window.monitor_index(grabs)
-    print(f"active window is on monitor: {active}")
+    t0 = time.perf_counter()
+    only = backends.capture.grab([active or primary_index(monitors)])
+    print(f"captured the active monitor alone in {(time.perf_counter() - t0) * 1000:.0f} ms")
 
     grab = next((g for g in grabs if g.monitor == active), grabs[0])
     t0 = time.perf_counter()
     sig = signature(grab.image)
     print(f"signature {sig.shape} in {(time.perf_counter() - t0) * 1000:.1f} ms; dhash {dhash(grab.image)[:16]}…")
     t0 = time.perf_counter()
-    second = backends.capture.grab(all_monitors=False)[0].image
-    print(f"cells changed between two consecutive grabs: {changed_cells(sig, signature(second))} (threshold default 8)")
+    second = only[0].image
+    print(f"cells changed between two consecutive grabs: {changed_cells(sig, signature(second))} (threshold default {Settings().dedupe_threshold})")
 
     out = Path(__file__).resolve().parent / "selftest.webp"
     thumb = Path(__file__).resolve().parent / "selftest.t.webp"

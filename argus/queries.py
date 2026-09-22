@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 
 from .db import Database
+from .sessions import group_sessions
 from .timeparse import iso_local
 
 EXCERPT_CHARS = 240
@@ -50,8 +51,11 @@ class Queries:
     def __init__(self, db: Database):
         self.db = db
 
-    def _range_clause(self, start: float | None, end: float | None, app: str | None):
+    def _range_clause(self, start: float | None, end: float | None, app: str | None, title: str | None = None):
         clauses, params = [], []
+        if title is not None:
+            clauses.append("f.window_title = ?")
+            params.append(title)
         if start is not None:
             clauses.append("f.until_at > ?")
             params.append(start)
@@ -72,8 +76,9 @@ class Queries:
         limit: int,
         cursor: float | None,
         ascending: bool = False,
+        title: str | None = None,
     ) -> dict:
-        clauses, params = self._range_clause(start, end, app)
+        clauses, params = self._range_clause(start, end, app, title)
         if cursor is not None:
             clauses.append("f.captured_at < ?" if not ascending else "f.captured_at > ?")
             params.append(cursor)
@@ -167,6 +172,20 @@ class Queries:
             for row in totals
         ]
         return {"apps": apps, "total_seconds": round(sum(a["seconds"] for a in apps))}
+
+    def sessions(self, day: str | None = None, start: float | None = None, end: float | None = None, app: str | None = None) -> list[dict]:
+        """Consecutive frames of the same app + window, oldest first."""
+        clauses, params = self._range_clause(start, end, app)
+        if day:
+            clauses.append("f.day = ?")
+            params.append(day)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        with self.db.lock:
+            rows = self.db.conn.execute(
+                f"SELECT f.id, f.captured_at, f.until_at, f.app, f.window_title FROM frames f {where} ORDER BY f.captured_at ASC, f.monitor ASC",
+                params,
+            ).fetchall()
+        return group_sessions(rows)
 
     def days(self) -> list[dict]:
         with self.db.lock:

@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from .db import Database
 
 OcrBackendName = Literal["auto", "rapidocr", "winocr", "tesseract"]
+CaptureScope = Literal["active", "all"]  # active = only the monitor with the foreground window
 
 
 class Settings(BaseModel):
@@ -21,10 +22,10 @@ class Settings(BaseModel):
     ocr_language: str = Field("es", min_length=2, max_length=8)
     retention_days: int = Field(30, ge=0, le=3650)  # 0 = keep forever
     storage_cap_mb: int = Field(5000, ge=100, le=1_000_000)
-    dedupe_threshold: int = Field(8, ge=0, le=2000)  # changed grid cells (192x108) that make a new frame
+    dedupe_threshold: int = Field(16, ge=0, le=5000)  # changed grid cells (384x216) that make a new frame
     image_max_width: int = Field(1280, ge=320, le=3840)
     thumb_max_width: int = Field(320, ge=64, le=1024)
-    all_monitors: bool = True
+    capture_scope: CaptureScope = "active"
 
 
 class SettingsPatch(BaseModel):
@@ -38,10 +39,10 @@ class SettingsPatch(BaseModel):
     ocr_language: str | None = Field(None, min_length=2, max_length=8)
     retention_days: int | None = Field(None, ge=0, le=3650)
     storage_cap_mb: int | None = Field(None, ge=100, le=1_000_000)
-    dedupe_threshold: int | None = Field(None, ge=0, le=2000)
+    dedupe_threshold: int | None = Field(None, ge=0, le=5000)
     image_max_width: int | None = Field(None, ge=320, le=3840)
     thumb_max_width: int | None = Field(None, ge=64, le=1024)
-    all_monitors: bool | None = None
+    capture_scope: CaptureScope | None = None
 
 
 class SettingsStore:

@@ -20,9 +20,11 @@ Mientras el estado sea **mirando**, cada `interval_s` segundos (5 por defecto):
 2. Si coincide una **exclusión** (nombre de proceso o expresión regular sobre el
    título), no se captura ni se lee nada; solo se cuenta un momento «oculto» en
    ese día.
-3. Si no, se capturan todos los monitores. Una captura que parece igual a la
+3. Si no, se captura la pantalla: con `capture_scope: active` (por defecto)
+   solo el monitor donde está la ventana activa (el principal si no se sabe);
+   con `all`, todos los monitores. Una captura que parece igual a la
    anterior del mismo monitor (misma ventana y menos de `dedupe_threshold`
-   celdas cambiadas en una cuadrícula gris de 192×108) **no se guarda**: se
+   celdas cambiadas en una cuadrícula gris de 384×216) **no se guarda**: se
    alarga la hora `until` de la anterior. Así se calculan las duraciones.
 4. Las capturas nuevas se guardan en WebP (ancho máximo 1280) más una miniatura
    de 320 px en `data/frames/AAAA/MM/DD/<id>.webp` y entran en la cola de OCR.
@@ -57,10 +59,11 @@ portapapeles ni tráfico de red.
   funciona en Linux/macOS con el backend falso, para pruebas y demostraciones.
 - Python 3.11 o superior (3.13 funciona). Node 22 solo para construir la
   interfaz.
-- Basta con la CPU: el motor OCR por defecto es `rapidocr`. En
-  Windows podéis cambiar a `winocr` (Windows.Media.Ocr, más rápido) tras
-  instalar `requirements-windows.txt`. `tesseract` se usa si `pytesseract` y el
-  binario están instalados.
+- Basta con la CPU. Con `ocr_backend: auto` el motor es `winocr`
+  (Windows.Media.Ocr, unos 150 ms por pantalla 1080p, necesita
+  `requirements-windows.txt`) cuando está disponible y `rapidocr` (ONNX en
+  CPU, multiplataforma) si no; `tesseract` se usa si `pytesseract` y el
+  binario están instalados. Cualquiera de los tres se puede forzar en Ajustes.
 
 ## Instalación y arranque (Windows)
 
@@ -82,16 +85,23 @@ Otras variables: `ARGUS_CAPTURE=auto|mss|fake|none`,
 `ARGUS_WINDOW=auto|windows|fake|none`, `ARGUS_AUTOSTART=0` (no arrancar el hilo
 de captura).
 
+### Acceso desde el móvil (a través de un túnel)
+
+El servidor escucha en 127.0.0.1 y solo responde a peticiones cuyo `Host` sea `localhost`, `127.0.0.1` o `[::1]`. Para entrar desde el móvil a través de un túnel que ponga la aplicación delante (una red privada, un proxy inverso), indicad los nombres de host adicionales en `ARGUS_ALLOWED_HOSTS`, separados por comas, exactos o `*.sufijo`: `ARGUS_ALLOWED_HOSTS=mi-pc.example,*.ts.net`. El puerto y las mayúsculas no importan, y el `Origin` de las llamadas a la API también tiene que corresponder a uno de esos hosts (con cualquier esquema o puerto). Las peticiones *fetch* desde otras webs se siguen rechazando; abrir la aplicación desde otra página (un enlace, un bookmarklet, el menú de compartir) es una navegación normal y funciona.
+
 Desarrollo: `python scripts/dev.py` lanza uvicorn con `--reload` y el servidor
 de Vite (que redirige `/api`).
 
 ## La interfaz
 
-- **Línea de tiempo**: selector de día, deslizador sobre las capturas del día,
-  miniaturas, filtro por aplicación; una captura se abre en grande con el texto
-  OCR superpuesto y seleccionable, anterior/siguiente (flechas del teclado).
-- **Buscar**: texto + rango de fechas + aplicación; resultados con fragmento
-  resaltado.
+- **Línea de tiempo**: selector de día; el día se agrupa en *sesiones* (una
+  misma aplicación y ventana vistas de forma continua: franja horaria, duración,
+  número de pantallas, miniaturas); una sesión se despliega con sus capturas y un
+  deslizador; una captura se abre en grande con el texto OCR superpuesto y
+  seleccionable, anterior/siguiente (flechas del teclado).
+- **Buscar**: texto + rango de fechas + aplicación; resultados agrupados por
+  aplicación y ventana con el mejor fragmento primero y horas como «hoy 17:32» /
+  «ayer 09:10».
 - **Actividad**: tiempo por aplicación (barras), títulos de ventana más
   frecuentes, tabla por día.
 - **Ajustes**: modo privado, captura activada, intervalo, sensibilidad al
@@ -110,11 +120,12 @@ Todas las rutas escuchan solo en `127.0.0.1` y rechazan otros hosts u orígenes.
 | Ruta | Para qué |
 | --- | --- |
 | `GET /api/health` | `{service, version, dataDirConfigured}` (sin autenticación) |
-| `GET /api/status` | estado, cola, última captura, disco, retención, backends |
+| `GET /api/status` | estado, cola, última captura, disco, retención, backends, `capture_scope`, monitores, `idle_since`/`idle_s` (la pantalla activa no cambia desde entonces) |
 | `GET/PUT /api/settings` | ajustes (PUT acepta un objeto parcial) |
 | `POST /api/pause`, `POST /api/resume`, `POST /api/private` | controles de grabación (`private` alterna; con `{private: bool}` fija) |
 | `GET/POST /api/exclusions`, `PATCH/DELETE /api/exclusions/{id}`, `POST /api/exclusions/test` | exclusiones |
-| `GET /api/timeline?from&to&app&q&limit&cursor&order` | capturas con duración y extracto, paginación por cursor |
+| `GET /api/timeline?from&to&app&q&title&limit&cursor&order` | capturas con duración y extracto, paginación por cursor |
+| `GET /api/sessions?day` (o `from&to`) `&app` | capturas consecutivas de una misma aplicación y ventana agrupadas en sesiones (inicio, fin, duración, número, miniaturas) |
 | `GET /api/frames/{id}` · `/image` · `/thumb` | texto completo + bloques + anterior/siguiente; ficheros WebP |
 | `GET /api/search?q&from&to&app&limit` | FTS5, orden BM25, `snippet()` con marcas `[ ]` |
 | `GET /api/apps?from&to` | tiempo por aplicación y títulos más frecuentes |
@@ -140,7 +151,7 @@ marcha y reenvía cada llamada a `POST /api/agent/call` con el token de
 | `screen_timeline` | qué había en pantalla y cuándo, con duraciones |
 | `screen_frame_text` | texto OCR completo de una captura (bloques opcionales) |
 | `screen_recent` | el texto de los últimos N minutos, sin repeticiones, lo más reciente primero |
-| `screen_activity` | tiempo por aplicación, ventanas principales y una línea de resumen |
+| `screen_activity` | tiempo por aplicación, ventanas principales, sesiones más largas y una línea de resumen |
 | `screen_days` | días con datos |
 | `screen_pause` / `screen_resume` | solo cuando el usuario lo pide |
 | `screen_delete_range` | borrado definitivo de un tramo (destructiva) |

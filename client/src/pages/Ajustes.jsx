@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { api } from "../api.js";
 import { useApp } from "../App.jsx";
 import { PageHeader, Switch } from "../components/ui.jsx";
-import { fmtBytes, fmtDateTime, STATE_LABEL } from "../format.js";
+import { fmtBytes, fmtDateTime, fmtDuration, STATE_LABEL } from "../format.js";
 
 const OCR_OPTIONS = [
   { value: "auto", label: "Automático (winocr si existe, si no rapidocr)" },
@@ -86,7 +86,8 @@ export default function Ajustes() {
           <dt className="help">Última captura</dt><dd>{fmtDateTime(status.last_capture_at)}</dd>
           <dt className="help">Cola de OCR</dt><dd className="num">{status.queue_depth} pendientes · {status.ocr_processed} procesadas{status.ocr_last_ms != null ? ` · última ${status.ocr_last_ms} ms` : ""}</dd>
           <dt className="help">Motor OCR en uso</dt><dd>{status.ocr_backend}</dd>
-          <dt className="help">Captura / ventana activa</dt><dd>{status.capture_backend} / {status.window_backend}</dd>
+          <dt className="help">Captura / ventana activa</dt><dd>{status.capture_backend} / {status.window_backend} · {status.monitors} monitores{status.active_monitor ? `, activo #${status.active_monitor}` : ""}</dd>
+          <dt className="help">Sin cambios</dt><dd>{status.idle_since ? `desde hace ${fmtDuration(status.idle_s)} (${fmtDateTime(status.idle_since)})` : "la pantalla activa está cambiando"}</dd>
           <dt className="help">Disco usado por capturas</dt><dd className="num">{fmtBytes(status.disk_usage_bytes)} de {status.storage_cap_mb} MB · libre {fmtBytes(status.disk_free_bytes)}</dd>
           <dt className="help">Capturas guardadas</dt><dd className="num">{status.frames_total} · hoy {status.today.frames} ({status.today.hidden} ocultas)</dd>
           <dt className="help">Carpeta de datos</dt><dd className="break-all">{status.data_dir}</dd>
@@ -103,11 +104,14 @@ export default function Ajustes() {
         <Row label="Intervalo" help="Segundos entre capturas. Las pantallas iguales no se duplican: solo se alarga su duración.">
           <NumberField value={settings.interval_s} min={1} max={600} suffix="s" onCommit={(n) => save({ interval_s: n })} />
         </Row>
-        <Row label="Sensibilidad al cambio" help="Celdas de una cuadrícula 192×108 que deben cambiar para guardar una pantalla nueva. Más alto = menos capturas.">
-          <NumberField value={settings.dedupe_threshold} min={0} max={2000} suffix="celdas" onCommit={(n) => save({ dedupe_threshold: n })} />
+        <Row label="Sensibilidad al cambio" help="Celdas de una cuadrícula 384×216 que deben cambiar para guardar una pantalla nueva. Más alto = menos capturas.">
+          <NumberField value={settings.dedupe_threshold} min={0} max={5000} suffix="celdas" onCommit={(n) => save({ dedupe_threshold: n })} />
         </Row>
-        <Row label="Todos los monitores" help="Apagado, solo se captura el monitor principal.">
-          <Switch checked={settings.all_monitors} label="Todos los monitores" onChange={(v) => save({ all_monitors: v })} />
+        <Row label="Ámbito de captura" help={`Con «solo el monitor activo» se captura y se lee únicamente la pantalla donde está la ventana en primer plano (${status.monitors} monitores detectados). Si no se sabe cuál es, se usa el principal.`}>
+          <select className="field field-sm" value={settings.capture_scope} onChange={(e) => save({ capture_scope: e.target.value })}>
+            <option value="active">Solo el monitor con la ventana activa</option>
+            <option value="all">Todos los monitores</option>
+          </select>
         </Row>
         <Row label="Motor OCR" help={Object.entries(available).map(([k, v]) => `${k}: ${v.available ? "disponible" : v.reason}`).join(" · ")}>
           <select className="field field-sm" value={settings.ocr_backend} onChange={(e) => save({ ocr_backend: e.target.value })}>

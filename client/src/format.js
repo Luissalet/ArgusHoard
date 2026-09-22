@@ -22,6 +22,17 @@ export function fmtDateTime(iso) {
   return `${localDay(date)} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+// "hoy 17:32", "ayer 09:10", otherwise "lun 21 sept 09:10".
+export function fmtRelative(iso) {
+  if (!iso) return "—";
+  const date = new Date(iso);
+  const day = localDay(date);
+  const clock = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  if (day === localDay()) return `hoy ${clock}`;
+  if (day === dayOffset(-1)) return `ayer ${clock}`;
+  return `${date.toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" })} ${clock}`;
+}
+
 export function fmtDay(day) {
   if (!day) return "—";
   const [y, m, d] = day.split("-");

@@ -65,7 +65,7 @@ def test_exclusions_record_hidden_ticks_only(services):
 
 
 def test_apps_and_days(services):
-    now = time.time()
+    now = time.mktime(time.localtime()[:3] + (12, 0, 0, 0, 0, -1))  # local noon: frames must stay on one day
     add_frame(services, now - 100, "editor", "notas.txt", ["a"], interval=30)
     add_frame(services, now - 60, "editor", "otro.txt", ["b"], interval=20)
     add_frame(services, now - 30, "navegador", "Receta", ["c"], interval=10)

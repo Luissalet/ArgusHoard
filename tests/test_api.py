@@ -90,6 +90,16 @@ def test_timeline_frames_search_apps_days(client):
     days = client.get("/api/days").json()["days"]
     assert len(days) == 1 and days[0]["frames"] == len(stored)
 
+    sessions = client.get("/api/sessions", params={"day": days[0]["day"]}).json()
+    assert sessions["frames"] == len(stored) and sessions["total_seconds"] == 40
+    assert [s["app"] for s in sessions["sessions"]] == ["editor", "navegador", "terminal", "hoja"]
+    assert sessions["sessions"][0]["count"] == 1 and sessions["sessions"][0]["thumbs"] == [stored[0]]
+    assert client.get("/api/sessions").status_code == 400
+    by_title = client.get("/api/timeline", params={"title": "Terminal", "order": "asc"}).json()["frames"]
+    assert len(by_title) == 1 and by_title[0]["app"] == "terminal"
+    status = client.get("/api/status").json()
+    assert status["capture_scope"] == "active" and status["monitors"] == 2 and "idle_s" in status
+
 
 def test_delete_range(client):
     svc = client.services
@@ -134,7 +144,9 @@ def test_agent_tools_and_call_auth(client):
     hits = client.post("/api/agent/call", json={"name": "screen_search", "arguments": {"q": "fontanero", "from": "hace 1 hora"}}, headers=auth).json()
     assert hits["count"] == 1 and hits["resolved"]["from"]
     activity = client.post("/api/agent/call", json={"name": "screen_activity", "arguments": {"from": "hoy"}}, headers=auth).json()
-    assert "editor" in activity["summary"]
+    assert "editor" in activity["summary"] and activity["sessions_count"] == 1 and activity["longest_sessions"][0]["app"] == "editor"
+    status = client.post("/api/agent/call", json={"name": "screen_status"}, headers=auth).json()
+    assert status["capture_scope"] == "active" and "idle_since" in status
     paused = client.post("/api/agent/call", json={"name": "screen_pause"}, headers=auth).json()
     assert paused["state"] == "paused"
     missing = client.post("/api/agent/call", json={"name": "screen_frame_text", "arguments": {"id": 4242}}, headers=auth)

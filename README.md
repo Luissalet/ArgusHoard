@@ -18,9 +18,11 @@ While the state is **watching**, every `interval_s` seconds (default 5):
 1. The active window is read (title, process name, monitor).
 2. If an **exclusion** rule matches (process name or window-title regex), nothing
    is captured or read; only a "hidden" tick is counted for that day.
-3. Otherwise every monitor is captured. A frame that looks like the previous
+3. Otherwise the screen is captured: with `capture_scope: active` (default)
+   only the monitor that contains the active window (primary monitor when the
+   window position is unknown); with `all`, every monitor. A frame that looks like the previous
    one for that monitor (same window, fewer than `dedupe_threshold` cells of a
-   192×108 grey grid changed) is **not stored**: the previous frame's `until`
+   384×216 grey grid changed) is **not stored**: the previous frame's `until`
    time is extended instead. That is how durations are computed.
 4. New frames are saved as WebP (max width 1280) plus a 320 px thumbnail under
    `data/frames/YYYY/MM/DD/<id>.webp` and queued for OCR. OCR never blocks
@@ -52,10 +54,11 @@ clipboard and network traffic are never touched.
 - Windows 10/11 (capture + active window). The whole pipeline after capture
   also runs on Linux/macOS with the fake backend for tests and demos.
 - Python 3.11+ (3.13 works). Node 22 only to build the client.
-- CPU is enough: the default OCR engine is `rapidocr`. On Windows
-  you can switch to `winocr` (Windows.Media.Ocr, faster) after installing
-  `requirements-windows.txt`. `tesseract` is used if `pytesseract` and the
-  binary are installed.
+- CPU is enough. With `ocr_backend: auto` the engine is `winocr`
+  (Windows.Media.Ocr, about 150 ms per 1080p frame, needs
+  `requirements-windows.txt`) when it is available and `rapidocr` (ONNX on
+  CPU, cross-platform) otherwise; `tesseract` is used if `pytesseract` and the
+  binary are installed. Any of the three can be forced in Ajustes.
 
 ## Install and run (Windows)
 
@@ -76,15 +79,21 @@ used). Data lives in `ARGUS_DATA_DIR` or `<repo>/data` (gitignored).
 Other env vars: `ARGUS_CAPTURE=auto|mss|fake|none`, `ARGUS_WINDOW=auto|windows|fake|none`,
 `ARGUS_AUTOSTART=0` (do not start the recorder thread).
 
+### Access from your phone (behind a tunnel)
+
+The server binds 127.0.0.1 and only answers requests whose `Host` is `localhost`, `127.0.0.1` or `[::1]`. To reach it from your phone through a tunnel that fronts the app (a private mesh network, a reverse proxy), list the extra host names in `ARGUS_ALLOWED_HOSTS`, comma-separated, exact names or `*.suffix`: `ARGUS_ALLOWED_HOSTS=my-pc.example,*.ts.net`. Port and letter case are ignored, and the `Origin` of API calls must resolve to one of those hosts too (any scheme or port). Cross-site *fetches* are still refused; opening the app from another page (a link, a bookmarklet, the share sheet) is a normal navigation and works.
+
 Development: `python scripts/dev.py` runs uvicorn `--reload` plus the Vite dev
 server (proxying `/api`).
 
 ## The UI (Spanish)
 
-- **Línea de tiempo**: day picker, scrubber over the day's frames, thumbnails,
-  filter by app; a frame opens as a big image with the OCR blocks overlaid as
-  selectable text, prev/next (arrow keys).
-- **Buscar**: query + date range + app; results with highlighted snippet.
+- **Línea de tiempo**: day picker, the day grouped into *sessions* (one app +
+  window seen continuously: time range, duration, count, preview thumbnails);
+  a session expands into its frames with a scrubber; a frame opens as a big
+  image with the OCR blocks overlaid as selectable text, prev/next (arrow keys).
+- **Buscar**: query + date range + app; results grouped by app + window with
+  the best snippet first and times as "hoy 17:32" / "ayer 09:10".
 - **Actividad**: time by app (bars), top window titles, per-day table.
 - **Ajustes**: private mode, enabled, interval, change sensitivity, monitors,
   OCR engine (with availability of each), image width, retention, storage cap,
@@ -101,11 +110,12 @@ All routes are bound to `127.0.0.1` and refuse other hosts/origins.
 | Route | Purpose |
 | --- | --- |
 | `GET /api/health` | `{service, version, dataDirConfigured}` (no auth) |
-| `GET /api/status` | state, queue depth, last capture, disk usage, retention, backends |
+| `GET /api/status` | state, queue depth, last capture, disk usage, retention, backends, `capture_scope`, monitors, `idle_since`/`idle_s` (active screen unchanged since then) |
 | `GET/PUT /api/settings` | settings (PUT accepts a partial object) |
 | `POST /api/pause`, `POST /api/resume`, `POST /api/private` | recording controls (`private` toggles; body `{private: bool}` sets) |
 | `GET/POST /api/exclusions`, `PATCH/DELETE /api/exclusions/{id}`, `POST /api/exclusions/test` | exclusion rules |
-| `GET /api/timeline?from&to&app&q&limit&cursor&order` | frames with duration and excerpt, cursor pagination |
+| `GET /api/timeline?from&to&app&q&title&limit&cursor&order` | frames with duration and excerpt, cursor pagination |
+| `GET /api/sessions?day` (or `from&to`) `&app` | consecutive frames of one app + window grouped into sessions (start, end, duration, count, preview thumbs) |
 | `GET /api/frames/{id}` · `/image` · `/thumb` | full text + blocks + prev/next; WebP files |
 | `GET /api/search?q&from&to&app&limit` | FTS5, BM25 ranking, `snippet()` with `[ ]` markers |
 | `GET /api/apps?from&to` | time by app + top window titles |
@@ -132,7 +142,7 @@ proxies every call to `POST /api/agent/call` with the token from
 | `screen_timeline` | what was on screen when, with durations |
 | `screen_frame_text` | full OCR text of a frame (optionally blocks) |
 | `screen_recent` | the last N minutes' text, deduplicated, most recent first |
-| `screen_activity` | time by app + top windows + one-line summary |
+| `screen_activity` | time by app + top windows + longest sessions + one-line summary |
 | `screen_days` | days that have data |
 | `screen_pause` / `screen_resume` | only when the user asks |
 | `screen_delete_range` | permanent deletion of a range (destructive) |

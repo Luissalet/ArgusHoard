@@ -86,6 +86,12 @@ class Services:
         except OSError:
             free = None
         today = self.frames.today_stats()
+        now = time.time()
+        idle_since = self.recorder.idle_since
+        try:
+            monitor_count = len(self.backends.capture.monitors())
+        except Exception:
+            monitor_count = 0
         return {
             "service": "argus-hoard",
             "version": __version__,
@@ -95,6 +101,11 @@ class Services:
             "private": s.private,
             "recorder_running": self.recorder.running(),
             "interval_s": s.interval_s,
+            "capture_scope": s.capture_scope,
+            "monitors": monitor_count,
+            "active_monitor": self.recorder.active_monitor,
+            "idle_since": iso_local(idle_since) if idle_since else None,
+            "idle_s": max(0, int(now - idle_since)) if idle_since else 0,
             "queue_depth": self.ocr.depth,
             "ocr_backend": self.ocr.engine_name(),
             "ocr_requested": s.ocr_backend,

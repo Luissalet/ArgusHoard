@@ -16,7 +16,7 @@ Quote OCR text as OCR text: it may contain recognition errors, and a window titl
 Never speculate beyond what the frames show; if a frame lacks text (ocr_status != done) say so instead of guessing.
 Prefer screen_recent (what was just on screen) and screen_search (find a word) before screen_timeline (browse a period).
 Times accept ISO datetimes and phrases in Spanish or English: "hoy", "ayer", "hace 2 horas", "esta mañana", "today", "yesterday", "2 hours ago".
-If a tool reports state paused, private or disabled, tell the user plainly that Argus is not recording right now.
+If a tool reports state paused, private or disabled, tell the user plainly that Argus is not recording right now. idle_since/idle_s in screen_status mean the active screen has not changed since then (no new frames, nothing to OCR).
 Only call screen_pause, screen_resume or screen_delete_range when the user explicitly asks for that action; deleting is permanent."""
 
 TIME_HELP = "ISO datetime or a phrase such as 'hoy', 'ayer', 'hace 2 horas', 'esta mañana', 'today', '2 hours ago'."
@@ -100,8 +100,9 @@ def _human(seconds: float) -> str:
 
 def run_status(services: Services, _: Empty) -> dict:
     s = services.status()
-    keep = ("state", "enabled", "paused", "private", "interval_s", "queue_depth", "ocr_backend", "last_capture_at",
-            "last_error", "frames_total", "today", "disk_usage_bytes", "storage_cap_mb", "retention_days", "capture_backend")
+    keep = ("state", "enabled", "paused", "private", "interval_s", "capture_scope", "monitors", "active_monitor", "idle_since",
+            "idle_s", "queue_depth", "ocr_backend", "last_capture_at", "last_error", "frames_total", "today", "disk_usage_bytes",
+            "storage_cap_mb", "retention_days", "capture_backend")
     return {k: s[k] for k in keep}
 
 
@@ -144,12 +145,15 @@ def run_activity(services: Services, args: RangeArgs) -> dict:
     lo, hi, resolved = _range(args)
     data = services.queries.apps(lo, hi)
     apps = data["apps"]
+    sessions = services.queries.sessions(None, lo, hi, None)
+    longest = sorted(sessions, key=lambda s: s["duration_s"], reverse=True)[:8]
+    longest = [{k: s[k] for k in ("app", "window_title", "start", "end", "duration_s", "count", "first_id")} for s in longest]
     if not apps:
         summary = "No screen activity recorded in that period."
     else:
         top = ", ".join(f"{a['app'] or 'unknown'} {_human(a['seconds'])}" for a in apps[:3])
-        summary = f"{_human(data['total_seconds'])} on screen across {len(apps)} apps; most time: {top}."
-    return {**_state_note(services), "resolved": resolved, "total_seconds": data["total_seconds"], "apps": apps, "summary": summary}
+        summary = f"{_human(data['total_seconds'])} on screen across {len(apps)} apps and {len(sessions)} sessions; most time: {top}."
+    return {**_state_note(services), "resolved": resolved, "total_seconds": data["total_seconds"], "apps": apps, "sessions_count": len(sessions), "longest_sessions": longest, "summary": summary}
 
 
 def run_days(services: Services, _: Empty) -> dict:
@@ -182,7 +186,7 @@ TOOLS: list[Tool] = [
     Tool("screen_timeline", "Browse what was on screen during a period, newest first, with app, window title, duration and a text excerpt per frame. Use after screen_search/screen_recent when the user wants the sequence of events.\nSinónimos: línea de tiempo, qué estaba haciendo, cronología, historial de pantalla, ayer, esta mañana, hace 2 horas, aplicación, ventana.", TimelineArgs, _ann(True), run_timeline),
     Tool("screen_frame_text", "Full OCR text of one frame (optionally its blocks with bounding boxes). Use ids returned by the other tools.\nSinónimos: texto completo, recuperar texto, captura, pantalla, leer la ventana.", FrameArgs, _ann(True), run_frame_text),
     Tool("screen_recent", "What the user was just looking at: OCR text of the last frames in the past N minutes, deduplicated, most recent first. Use for 'what was I doing', 'what did I just read', 'hace un rato'.\nSinónimos: qué estaba haciendo, hace un rato, ahora mismo, lo último que vi, pantalla actual, ventana, recuperar texto.", RecentArgs, _ann(True), run_recent),
-    Tool("screen_activity", "Time spent per app in a period, with the top window titles per app and a one-line human summary. Durations come from how long each frame stayed on screen.\nSinónimos: actividad, en qué he perdido el tiempo, cuánto tiempo, aplicación, ventana, hoy, ayer, esta semana, resumen del día.", RangeArgs, _ann(True), run_activity),
+    Tool("screen_activity", "Time spent per app in a period, with the top window titles per app, the longest sessions (consecutive frames of one app + window) and a one-line human summary. Durations come from how long each frame stayed on screen.\nSinónimos: actividad, en qué he perdido el tiempo, cuánto tiempo, aplicación, ventana, hoy, ayer, esta semana, resumen del día.", RangeArgs, _ann(True), run_activity),
     Tool("screen_days", "Days that have screen data, with frames, hidden ticks (excluded apps) and seconds on screen per day.\nSinónimos: días, qué días hay, historial, calendario, pantalla.", Empty, _ann(True), run_days),
     Tool("screen_pause", "Pause recording until screen_resume is called (or the user resumes from the app). Only when the user asks for it.\nSinónimos: pausa, parar, deja de grabar, deja de mirar, pantalla.", Empty, _ann(False, False, True), run_pause),
     Tool("screen_resume", "Resume recording (also leaves private mode). Only when the user asks for it.\nSinónimos: reanudar, continuar, vuelve a grabar, vuelve a mirar, pantalla.", Empty, _ann(False, False, True), run_resume),

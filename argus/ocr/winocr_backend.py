@@ -15,6 +15,19 @@ from ..store import Block
 from .base import OcrBackend, OcrResult, join_blocks
 
 
+def _load_onnxruntime_first() -> None:
+    """Measured on Windows 11 / Python 3.13: importing `winocr` (WinRT) and then
+    `onnxruntime` dies with an access violation, while the other order is fine.
+    So whenever onnxruntime is installed it is imported before WinRT touches the
+    process, even if this session never uses RapidOCR."""
+    if importlib.util.find_spec("onnxruntime") is None:
+        return
+    try:
+        import onnxruntime  # noqa: F401
+    except Exception:  # a broken onnxruntime must not take winocr down with it
+        pass
+
+
 def _get(obj: Any, key: str, default=None):
     if isinstance(obj, dict):
         return obj.get(key, default)
@@ -25,6 +38,7 @@ class WinOcr(OcrBackend):
     name = "winocr"
 
     def __init__(self, language: str = "es"):
+        _load_onnxruntime_first()
         import winocr
 
         self._winocr = winocr

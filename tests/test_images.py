@@ -25,7 +25,7 @@ def test_caret_and_clock_are_duplicates_but_new_text_is_not():
     scrolled = screen(["Pan integral", "Tomates", "Leche"])
     other = render_screen(["Traceback (most recent call last):", "KeyError", "Proceso terminado"], size=(1920, 1080), title_bar="Terminal")
 
-    threshold = 8
+    threshold = 16
     ref = signature(base)
     assert is_near_duplicate(ref, signature(caret), threshold)
     assert is_near_duplicate(ref, signature(clock), threshold)

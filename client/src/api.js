@@ -33,6 +33,7 @@ export const api = {
   removeExclusion: (id) => request("DELETE", `/api/exclusions/${id}`),
   testExclusion: (app, title) => request("POST", "/api/exclusions/test", { body: { app, title } }),
   timeline: (params) => request("GET", "/api/timeline", { params }),
+  sessions: (params) => request("GET", "/api/sessions", { params }),
   frame: (id) => request("GET", `/api/frames/${id}`),
   search: (params) => request("GET", "/api/search", { params }),
   apps: (params) => request("GET", "/api/apps", { params }),

@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { STATE_LABEL } from "../format.js";
+import { fmtDuration, STATE_LABEL } from "../format.js";
 
 export function Toast({ message, onClose }) {
   useEffect(() => {
@@ -18,9 +18,10 @@ export function Toast({ message, onClose }) {
 export function Banner({ status, onPause, onResume, onPrivate }) {
   if (!status) return null;
   const state = status.state;
+  const idle = state === "watching" && status.idle_s >= 60 ? ` · sin cambios desde hace ${fmtDuration(status.idle_s)}` : "";
   const detail =
     state === "watching"
-      ? `cada ${status.interval_s} s · OCR ${status.ocr_backend}${status.queue_depth ? ` · ${status.queue_depth} en cola` : ""}`
+      ? `cada ${status.interval_s} s · OCR ${status.ocr_backend}${status.queue_depth ? ` · ${status.queue_depth} en cola` : ""}${idle}`
       : state === "paused"
         ? "no se guardan capturas hasta que reanudes"
         : state === "private"
