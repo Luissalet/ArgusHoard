@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import re
+import time
 
 from .db import Database
+from .search import Candidate, group_moments, idf, query_terms, rank_candidates
 from .sessions import group_sessions
 from .timeparse import iso_local
 
@@ -131,21 +133,61 @@ class Queries:
             ).fetchone()
         return {"prev": prev["id"] if prev else None, "next": nxt["id"] if nxt else None}
 
-    def search(self, q: str, start: float | None, end: float | None, app: str | None, limit: int) -> dict:
+    def _avg_text_tokens(self) -> float:
+        """Average OCR text length in tokens (chars / 6), cached for a minute."""
+        cached = getattr(self, "_avg_cache", None)
+        if cached and time.time() - cached[0] < 60:
+            return cached[1]
+        with self.db.lock:
+            row = self.db.conn.execute("SELECT AVG(LENGTH(text)) AS chars FROM frames_fts").fetchone()
+        value = max(1.0, float(row["chars"] or 0) / 6.0)
+        self._avg_cache = (time.time(), value)
+        return value
+
+    def search(self, q: str, start: float | None, end: float | None, app: str | None, limit: int, group_window_s: int = 600) -> dict:
+        """FTS5 finds candidates; `argus.search` re-ranks them and collapses runs into moments."""
         match = fts_query(q)
-        if not match:
-            return {"query": q, "hits": []}
+        terms = query_terms(q)
+        if not match or not terms:
+            return {"query": q, "hits": [], "frames_total": 0}
         clauses, params = self._range_clause(start, end, app)
         where = ("AND " + " AND ".join(clauses)) if clauses else ""
-        sql = f"""SELECT f.*, bm25(frames_fts, 1.0, 3.0, 2.0) AS rank,
+        candidate_limit = max(400, limit * 25)
+        sql = f"""SELECT f.*, frames_fts.text AS text, bm25(frames_fts, 1.0, 3.0, 2.0) AS fts_rank,
                          snippet(frames_fts, 0, '[', ']', '…', 18) AS snip
                   FROM frames_fts JOIN frames f ON f.id = frames_fts.rowid
                   WHERE frames_fts MATCH ? {where}
-                  ORDER BY rank LIMIT ?"""
+                  ORDER BY fts_rank LIMIT ?"""
         with self.db.lock:
-            rows = self.db.conn.execute(sql, [match, *params, limit]).fetchall()
-        hits = [{**_frame_row(row), "snippet": re.sub(r"\s+", " ", row["snip"] or "").strip(), "rank": round(row["rank"], 3)} for row in rows]
-        return {"query": q, "match": match, "hits": hits}
+            rows = self.db.conn.execute(sql, [match, *params, candidate_limit]).fetchall()
+            total = int(self.db.conn.execute("SELECT COUNT(*) AS n FROM frames_fts").fetchone()["n"])
+            idfs = {}
+            for term, prefix in terms:
+                hits = int(self.db.conn.execute(
+                    "SELECT COUNT(*) AS n FROM frames_fts WHERE frames_fts MATCH ?", (f'"{term}"*' if prefix else f'"{term}"',)
+                ).fetchone()["n"])
+                idfs[term] = idf(total, hits)
+        candidates = [
+            Candidate(row["id"], float(row["captured_at"]), row["app"], row["window_title"], row["text"] or "",
+                      re.sub(r"\s+", " ", row["snip"] or "").strip(), dict(row))
+            for row in rows
+        ]
+        ranked = rank_candidates(candidates, terms, idfs, self._avg_text_tokens())
+        moments = group_moments(ranked, group_window_s)[:limit]
+        hits = []
+        for moment in moments:
+            best = moment["best"]
+            hits.append({
+                **_frame_row(best.row),
+                "snippet": best.snippet,
+                "rank": round(moment["rank"], 4),
+                "first_at": iso_local(moment["first_at"]),
+                "last_at": iso_local(moment["last_at"]),
+                "count": moment["count"],
+                "frame_ids": moment["frame_ids"],
+                "duration_s": round(sum(max(0.0, float(c.row["until_at"]) - float(c.row["captured_at"])) for c, _ in moment["members"]), 1),
+            })
+        return {"query": q, "match": match, "hits": hits, "frames_total": len(candidates), "moments_total": len(group_moments(ranked, group_window_s))}
 
     def apps(self, start: float | None, end: float | None, titles_per_app: int = 5) -> dict:
         clauses, params = self._range_clause(start, end, None)

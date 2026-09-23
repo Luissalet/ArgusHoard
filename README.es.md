@@ -99,9 +99,9 @@ de Vite (que redirige `/api`).
   número de pantallas, miniaturas); una sesión se despliega con sus capturas y un
   deslizador; una captura se abre en grande con el texto OCR superpuesto y
   seleccionable, anterior/siguiente (flechas del teclado).
-- **Buscar**: texto + rango de fechas + aplicación; resultados agrupados por
-  aplicación y ventana con el mejor fragmento primero y horas como «hoy 17:32» /
-  «ayer 09:10».
+- **Buscar**: texto + rango de fechas + aplicación; una fila por momento (las
+  pantallas repetidas de una ventana se agrupan, con tira de miniaturas), horas
+  como «hoy 17:32–17:41» / «ayer 09:10».
 - **Actividad**: tiempo por aplicación (barras), títulos de ventana más
   frecuentes, tabla por día.
 - **Ajustes**: modo privado, captura activada, intervalo, sensibilidad al
@@ -127,7 +127,7 @@ Todas las rutas escuchan solo en `127.0.0.1` y rechazan otros hosts u orígenes.
 | `GET /api/timeline?from&to&app&q&title&limit&cursor&order` | capturas con duración y extracto, paginación por cursor |
 | `GET /api/sessions?day` (o `from&to`) `&app` | capturas consecutivas de una misma aplicación y ventana agrupadas en sesiones (inicio, fin, duración, número, miniaturas) |
 | `GET /api/frames/{id}` · `/image` · `/thumb` | texto completo + bloques + anterior/siguiente; ficheros WebP |
-| `GET /api/search?q&from&to&app&limit` | FTS5, orden BM25, `snippet()` con marcas `[ ]` |
+| `GET /api/search?q&from&to&app&limit` | candidatos FTS5 reordenados con BM25 (título 3 / aplicación 2 / texto 1, IDF suavizado para que `rank` sea siempre un negativo real), `snippet()` con marcas `[ ]`; las pantallas casi idénticas de una misma ventana en 10 minutos se agrupan en un *momento* (`first_at`, `last_at`, `count`, `frame_ids`, la mejor primero); `limit` cuenta momentos |
 | `GET /api/apps?from&to` | tiempo por aplicación y títulos más frecuentes |
 | `GET /api/days` | días con datos (capturas, momentos ocultos, segundos) |
 | `DELETE /api/frames?from&to` | borrar un tramo (definitivo) |
@@ -147,7 +147,7 @@ marcha y reenvía cada llamada a `POST /api/agent/call` con el token de
 | Herramienta | Qué hace |
 | --- | --- |
 | `screen_status` | estado de la grabación, cola, última captura, disco, retención |
-| `screen_search` | búsqueda de texto completo con fragmentos (`q`, `from`, `to`, `app`, `limit`) |
+| `screen_search` | búsqueda de texto completo con fragmentos; cada resultado es un momento (`first_at`, `last_at`, `count`, `frame_ids`) |
 | `screen_timeline` | qué había en pantalla y cuándo, con duraciones |
 | `screen_frame_text` | texto OCR completo de una captura (bloques opcionales) |
 | `screen_recent` | el texto de los últimos N minutos, sin repeticiones, lo más reciente primero |

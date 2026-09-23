@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { api } from "../api.js";
 import { useApp } from "../App.jsx";
 import { Empty, PageHeader } from "../components/ui.jsx";
-import { dayOffset, fmtDuration, fmtRelative } from "../format.js";
+import { dayOffset, fmtDuration, fmtRelative, fmtTime } from "../format.js";
 
 // snippet() marks matches with [ ] — render them as <mark> without trusting HTML.
 function Snippet({ text }) {
@@ -14,48 +14,43 @@ function Snippet({ text }) {
   );
 }
 
-// Hits come ranked; group them by app + window keeping the best-ranked hit as the face of the group.
-function groupHits(hits) {
-  const groups = new Map();
-  for (const hit of hits) {
-    const key = `${hit.app}\u0000${hit.window_title}`;
-    if (!groups.has(key)) groups.set(key, { key, app: hit.app, window_title: hit.window_title, best: hit, hits: [] });
-    groups.get(key).hits.push(hit);
-  }
-  return [...groups.values()];
+// "hoy 17:32" for a single frame, "hoy 17:32–17:41" for a moment that spans several.
+function momentTime(hit) {
+  const first = fmtRelative(hit.first_at);
+  if (hit.count <= 1) return first;
+  return `${first}–${fmtTime(hit.last_at).slice(0, 5)}`;
 }
 
-function HitRow({ hit, openFrame, compact }) {
-  return (
-    <button type="button" className={`frame-card grid gap-3 ${compact ? "grid-cols-[72px_minmax(0,1fr)]" : "grid-cols-[112px_minmax(0,1fr)] md:grid-cols-[160px_minmax(0,1fr)]"}`} onClick={() => openFrame(hit.id)}>
-      <img className="thumb" src={api.thumbUrl(hit.id)} alt="" loading="lazy" />
-      <div className="min-w-0">
-        <div className="help num">{fmtRelative(hit.captured_at)} · {fmtDuration(hit.duration_s)} en pantalla</div>
-        <Snippet text={hit.snippet} />
-      </div>
-    </button>
-  );
-}
-
-function Group({ group, openFrame }) {
-  const [open, setOpen] = useState(false);
-  const others = group.hits.filter((h) => h.id !== group.best.id);
+// The API already collapses runs of identical frames into moments; each row is one moment.
+function Moment({ hit, openFrame }) {
+  const [all, setAll] = useState(false);
+  const strip = all ? hit.frame_ids : hit.frame_ids.slice(0, 6);
   return (
     <li className="rounded-lg border p-2" style={{ borderColor: "var(--line)", background: "var(--white)" }}>
-      <div className="mb-1 flex flex-wrap items-baseline gap-x-2 px-1">
-        <span className="truncate text-[13px] font-semibold">{group.window_title || "(sin título)"}</span>
-        <span className="help">{group.app || "app desconocida"}</span>
-        {others.length > 0 && (
-          <button type="button" className="btn-link ml-auto text-[12px]" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
-            {open ? "Ocultar" : `Ver ${others.length} más`}
-          </button>
-        )}
-      </div>
-      <HitRow hit={group.best} openFrame={openFrame} />
-      {open && (
-        <ul className="mt-2 grid gap-2 pl-4">
-          {others.map((hit) => <li key={hit.id}><HitRow hit={hit} openFrame={openFrame} compact /></li>)}
-        </ul>
+      <button type="button" className="frame-card grid grid-cols-[112px_minmax(0,1fr)] gap-3 md:grid-cols-[160px_minmax(0,1fr)]" onClick={() => openFrame(hit.id)}>
+        <img className="thumb" src={api.thumbUrl(hit.id)} alt="" loading="lazy" />
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-baseline gap-x-2">
+            <span className="truncate text-[13px] font-semibold">{hit.window_title || "(sin título)"}</span>
+            <span className="help">{hit.app || "app desconocida"}</span>
+          </div>
+          <div className="help num">
+            {momentTime(hit)} · {hit.count === 1 ? "1 pantalla" : `${hit.count} pantallas`} · {fmtDuration(hit.duration_s)} en pantalla
+          </div>
+          <Snippet text={hit.snippet} />
+        </div>
+      </button>
+      {hit.count > 1 && (
+        <div className="mt-2 flex flex-wrap items-center gap-1 px-1">
+          {strip.map((id) => (
+            <button key={id} type="button" onClick={() => openFrame(id)} aria-label={`Abrir captura ${id}`} className="rounded border" style={{ borderColor: id === hit.id ? "var(--accent)" : "var(--line)" }}>
+              <img src={api.thumbUrl(id)} alt="" loading="lazy" className="h-10 w-[72px] rounded object-cover" />
+            </button>
+          ))}
+          {hit.frame_ids.length > 6 && (
+            <button type="button" className="btn-link ml-1 text-[12px]" onClick={() => setAll((v) => !v)}>{all ? "Menos" : `Ver las ${hit.frame_ids.length}`}</button>
+          )}
+        </div>
       )}
     </li>
   );
@@ -73,7 +68,6 @@ export default function Buscar() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => { api.apps({}).then((a) => setApps(a.apps)).catch(() => {}); }, []);
-  const groups = useMemo(() => (result ? groupHits(result.hits) : []), [result]);
 
   const search = async (event) => {
     event?.preventDefault();
@@ -81,7 +75,7 @@ export default function Buscar() {
     setLoading(true);
     setError(null);
     try {
-      setResult(await api.search({ q: q.trim(), from, to, app, limit: 200 }));
+      setResult(await api.search({ q: q.trim(), from, to, app, limit: 60 }));
     } catch (e) {
       setError(e.message);
     } finally {
@@ -93,7 +87,7 @@ export default function Buscar() {
 
   return (
     <div>
-      <PageHeader title="Buscar" description="Busca en el texto reconocido, los títulos de ventana y los nombres de aplicación. Todas las palabras deben aparecer; la última vale como prefijo." />
+      <PageHeader title="Buscar" description="Busca en el texto reconocido, los títulos de ventana y los nombres de aplicación. Todas las palabras deben aparecer; la última vale como prefijo. Las pantallas repetidas de un mismo momento se agrupan." />
       <form onSubmit={search} className="panel mb-5">
         <div className="grid gap-3 md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_auto]">
           <label className="block">
@@ -131,9 +125,12 @@ export default function Buscar() {
       {result && result.hits.length === 0 && <Empty title="Nada por aquí">Prueba con menos palabras o amplía las fechas. El OCR puede haber leído mal alguna letra.</Empty>}
       {result && result.hits.length > 0 && (
         <div>
-          <p className="help mb-3">{result.hits.length} pantallas en {groups.length} ventanas para «{result.query}», la mejor coincidencia primero.</p>
+          <p className="help mb-3">
+            {result.moments_total} momentos ({result.frames_total} pantallas) para «{result.query}», la mejor coincidencia primero
+            {result.moments_total > result.hits.length ? `; se muestran ${result.hits.length}` : ""}.
+          </p>
           <ul className="grid gap-2">
-            {groups.map((g) => <Group key={g.key} group={g} openFrame={openFrame} />)}
+            {result.hits.map((hit) => <Moment key={hit.id} hit={hit} openFrame={openFrame} />)}
           </ul>
         </div>
       )}

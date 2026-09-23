@@ -14,7 +14,7 @@ from .timeparse import resolve_range, to_epoch
 AGENT_INSTRUCTIONS = """Argus's Hoard is the user's own screen history: periodic screenshots of their PC, OCR'd and searchable, stored only on their machine.
 Quote OCR text as OCR text: it may contain recognition errors, and a window title is what the app reported, not a fact you verified.
 Never speculate beyond what the frames show; if a frame lacks text (ocr_status != done) say so instead of guessing.
-Prefer screen_recent (what was just on screen) and screen_search (find a word) before screen_timeline (browse a period).
+Prefer screen_recent (what was just on screen) and screen_search (find a word) before screen_timeline (browse a period). A screen_search hit is a moment (count frames between first_at and last_at); pass its id to screen_frame_text for the full text.
 Times accept ISO datetimes and phrases in Spanish or English: "hoy", "ayer", "hace 2 horas", "esta mañana", "today", "yesterday", "2 hours ago".
 If a tool reports state paused, private or disabled, tell the user plainly that Argus is not recording right now. idle_since/idle_s in screen_status mean the active screen has not changed since then (no new frames, nothing to OCR).
 Only call screen_pause, screen_resume or screen_delete_range when the user explicitly asks for that action; deleting is permanent."""
@@ -110,10 +110,12 @@ def run_search(services: Services, args: SearchArgs) -> dict:
     lo, hi, resolved = _range(args)
     result = services.queries.search(args.q, lo, hi, args.app, args.limit)
     hits = [
-        {"id": h["id"], "time": h["captured_at"], "duration_s": h["duration_s"], "app": h["app"], "window_title": h["window_title"], "snippet": h["snippet"]}
+        {"id": h["id"], "time": h["captured_at"], "first_at": h["first_at"], "last_at": h["last_at"], "count": h["count"],
+         "frame_ids": h["frame_ids"][:20], "duration_s": h["duration_s"], "app": h["app"], "window_title": h["window_title"], "snippet": h["snippet"]}
         for h in result["hits"]
     ]
-    return {**_state_note(services), "query": args.q, "resolved": resolved, "hits": hits, "count": len(hits)}
+    return {**_state_note(services), "query": args.q, "resolved": resolved, "hits": hits, "count": len(hits),
+            "frames_matched": result.get("frames_total", 0), "moments_total": result.get("moments_total", len(hits))}
 
 
 def run_timeline(services: Services, args: TimelineArgs) -> dict:
@@ -182,7 +184,7 @@ def _ann(read_only: bool, destructive: bool = False, idempotent: bool | None = N
 
 TOOLS: list[Tool] = [
     Tool("screen_status", "Whether Argus is recording (watching, paused, private or disabled), OCR queue depth, last capture, disk usage and retention.\nSinónimos: estado, pantalla, está grabando, pausa, modo privado, espacio en disco.", Empty, _ann(True), run_status),
-    Tool("screen_search", "Full-text search over everything that was on screen (OCR text, window titles, app names) with BM25 ranking and a snippet per frame. Best first step for 'that error I saw' or 'where did I read X'.\nSinónimos: buscar, pantalla, error que vi, texto que vi, dónde leí, recuperar texto, ventana, aplicación, ayer, hace un rato.", SearchArgs, _ann(True), run_search),
+    Tool("screen_search", "Full-text search over everything that was on screen (OCR text, window titles, app names), BM25-ranked (window title weighs most). Each hit is a *moment*: consecutive near-identical frames of one window collapsed together (first_at, last_at, count, frame_ids with the best frame first; `id` is that frame). `limit` counts moments. Best first step for 'that error I saw' or 'where did I read X'.\nSinónimos: buscar, pantalla, error que vi, texto que vi, dónde leí, recuperar texto, ventana, aplicación, ayer, hace un rato.", SearchArgs, _ann(True), run_search),
     Tool("screen_timeline", "Browse what was on screen during a period, newest first, with app, window title, duration and a text excerpt per frame. Use after screen_search/screen_recent when the user wants the sequence of events.\nSinónimos: línea de tiempo, qué estaba haciendo, cronología, historial de pantalla, ayer, esta mañana, hace 2 horas, aplicación, ventana.", TimelineArgs, _ann(True), run_timeline),
     Tool("screen_frame_text", "Full OCR text of one frame (optionally its blocks with bounding boxes). Use ids returned by the other tools.\nSinónimos: texto completo, recuperar texto, captura, pantalla, leer la ventana.", FrameArgs, _ann(True), run_frame_text),
     Tool("screen_recent", "What the user was just looking at: OCR text of the last frames in the past N minutes, deduplicated, most recent first. Use for 'what was I doing', 'what did I just read', 'hace un rato'.\nSinónimos: qué estaba haciendo, hace un rato, ahora mismo, lo último que vi, pantalla actual, ventana, recuperar texto.", RecentArgs, _ann(True), run_recent),

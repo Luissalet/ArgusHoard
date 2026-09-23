@@ -83,6 +83,8 @@ def test_timeline_frames_search_apps_days(client):
 
     search = client.get("/api/search", params={"q": "keyerror"}).json()
     assert len(search["hits"]) == 1 and "[KeyError" in search["hits"][0]["snippet"]
+    hit = search["hits"][0]
+    assert hit["count"] == 1 and hit["frame_ids"] == [hit["id"]] and hit["first_at"] == hit["captured_at"] and hit["rank"] < 0
     assert client.get("/api/search", params={"q": ""}).status_code == 400
 
     apps = client.get("/api/apps", params={"from": "hoy"}).json()
@@ -142,7 +144,8 @@ def test_agent_tools_and_call_auth(client):
     recent = client.post("/api/agent/call", json={"name": "screen_recent", "arguments": {"minutes": 5}}, headers=auth).json()
     assert recent["count"] == 1 and "compra" in recent["frames"][0]["text"].lower()
     hits = client.post("/api/agent/call", json={"name": "screen_search", "arguments": {"q": "fontanero", "from": "hace 1 hora"}}, headers=auth).json()
-    assert hits["count"] == 1 and hits["resolved"]["from"]
+    assert hits["count"] == 1 and hits["resolved"]["from"] and hits["frames_matched"] == 1
+    assert hits["hits"][0]["count"] == 1 and hits["hits"][0]["frame_ids"] == [hits["hits"][0]["id"]] and hits["hits"][0]["first_at"]
     activity = client.post("/api/agent/call", json={"name": "screen_activity", "arguments": {"from": "hoy"}}, headers=auth).json()
     assert "editor" in activity["summary"] and activity["sessions_count"] == 1 and activity["longest_sessions"][0]["app"] == "editor"
     status = client.post("/api/agent/call", json={"name": "screen_status"}, headers=auth).json()

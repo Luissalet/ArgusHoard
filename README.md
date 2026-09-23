@@ -92,8 +92,9 @@ server (proxying `/api`).
   window seen continuously: time range, duration, count, preview thumbnails);
   a session expands into its frames with a scrubber; a frame opens as a big
   image with the OCR blocks overlaid as selectable text, prev/next (arrow keys).
-- **Buscar**: query + date range + app; results grouped by app + window with
-  the best snippet first and times as "hoy 17:32" / "ayer 09:10".
+- **Buscar**: query + date range + app; one row per moment (repeated frames of
+  a window collapsed, with a thumbnail strip), times as "hoy 17:32–17:41" /
+  "ayer 09:10".
 - **Actividad**: time by app (bars), top window titles, per-day table.
 - **Ajustes**: private mode, enabled, interval, change sensitivity, monitors,
   OCR engine (with availability of each), image width, retention, storage cap,
@@ -117,7 +118,7 @@ All routes are bound to `127.0.0.1` and refuse other hosts/origins.
 | `GET /api/timeline?from&to&app&q&title&limit&cursor&order` | frames with duration and excerpt, cursor pagination |
 | `GET /api/sessions?day` (or `from&to`) `&app` | consecutive frames of one app + window grouped into sessions (start, end, duration, count, preview thumbs) |
 | `GET /api/frames/{id}` · `/image` · `/thumb` | full text + blocks + prev/next; WebP files |
-| `GET /api/search?q&from&to&app&limit` | FTS5, BM25 ranking, `snippet()` with `[ ]` markers |
+| `GET /api/search?q&from&to&app&limit` | FTS5 candidates re-ranked with BM25 (title 3 / app 2 / text 1, smoothed IDF so `rank` is always a real negative), `snippet()` with `[ ]` markers; consecutive near-identical hits of one window within 10 min collapse into one *moment* (`first_at`, `last_at`, `count`, `frame_ids` best first); `limit` counts moments |
 | `GET /api/apps?from&to` | time by app + top window titles |
 | `GET /api/days` | days with data (frames, hidden ticks, seconds) |
 | `DELETE /api/frames?from&to` | delete a range (permanent) |
@@ -138,7 +139,7 @@ proxies every call to `POST /api/agent/call` with the token from
 | Tool | What it does |
 | --- | --- |
 | `screen_status` | recording state, queue, last capture, disk, retention |
-| `screen_search` | full-text search with snippets (`q`, `from`, `to`, `app`, `limit`) |
+| `screen_search` | full-text search with snippets; each hit is a moment (`first_at`, `last_at`, `count`, `frame_ids`) |
 | `screen_timeline` | what was on screen when, with durations |
 | `screen_frame_text` | full OCR text of a frame (optionally blocks) |
 | `screen_recent` | the last N minutes' text, deduplicated, most recent first |
