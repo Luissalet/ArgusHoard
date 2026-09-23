@@ -83,6 +83,8 @@ Other env vars: `ARGUS_CAPTURE=auto|mss|fake|none`, `ARGUS_WINDOW=auto|windows|f
 
 The server binds 127.0.0.1 and only answers requests whose `Host` is `localhost`, `127.0.0.1` or `[::1]`. To reach it from your phone through a tunnel that fronts the app (a private mesh network, a reverse proxy), list the extra host names in `ARGUS_ALLOWED_HOSTS`, comma-separated, exact names or `*.suffix`: `ARGUS_ALLOWED_HOSTS=my-pc.example,*.ts.net`. Port and letter case are ignored, and the `Origin` of API calls must resolve to one of those hosts too (any scheme or port). Cross-site *fetches* are still refused; opening the app from another page (a link, a bookmarklet, the share sheet) is a normal navigation and works.
 
+Once opened through the tunnel, the browser offers to install it (PWA).
+
 Development: `python scripts/dev.py` runs uvicorn `--reload` plus the Vite dev
 server (proxying `/api`).
 
