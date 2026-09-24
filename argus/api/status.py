@@ -9,13 +9,15 @@ from .. import __version__
 from ..exclusions import first_match
 from ..settings import SettingsPatch
 from .deps import services
+from ..hoard_link import family
 
 router = APIRouter(prefix="/api")
 
 
 @router.get("/health")
 def health(request: Request):
-    return {"service": "argus-hoard", "version": __version__, "dataDirConfigured": request.app.state.config.data_dir_configured}
+    return {"service": "argus-hoard", "version": __version__, "dataDirConfigured": request.app.state.config.data_dir_configured,
+            "hoard_link": family.health_block()}
 
 
 @router.get("/status")
