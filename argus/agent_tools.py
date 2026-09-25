@@ -40,7 +40,9 @@ class TimelineArgs(BaseModel):
     from_: str | None = Field(None, alias="from", description=f"Start bound. {TIME_HELP}")
     to: str | None = Field(None, description=f"End bound. {TIME_HELP}")
     app: str | None = Field(None, max_length=200, description="Restrict to one process name.")
-    limit: int = Field(40, ge=1, le=200)
+    limit: int = Field(20, ge=1, le=200, description="How many entries (segments when grouped, frames otherwise).")
+    group: bool = Field(True, description="Merge consecutive frames of the same app and window into one segment (compact). false = every frame.")
+    cursor: float | None = Field(None, description="next_cursor from a previous call, to continue further back in time.")
 
     model_config = {"populate_by_name": True}
 
@@ -118,15 +120,57 @@ def run_search(services: Services, args: SearchArgs) -> dict:
             "frames_matched": result.get("frames_total", 0), "moments_total": result.get("moments_total", len(hits))}
 
 
+def _segments(frames: list[dict], limit: int) -> tuple[list[dict], float | None]:
+    """Consecutive frames (newest first) of one app + window become one segment.
+
+    Returns up to `limit` segments and the cursor (epoch of the oldest frame used)
+    when more frames remain beyond them.
+    """
+    segments: list[dict] = []
+    for f in frames:
+        last = segments[-1] if segments else None
+        if last is not None and last["app"] == f["app"] and last["window_title"] == f["window_title"]:
+            last["from"] = f["captured_at"]
+            last["duration_s"] = round(last["duration_s"] + (f["duration_s"] or 0), 1)
+            last["frames"] += 1
+            if len(last["frame_ids"]) < 5:
+                last["frame_ids"].append(f["id"])
+            if len(f["excerpt"] or "") > len(last["excerpt"] or ""):
+                last["excerpt"] = f["excerpt"]
+            last["_ts"] = f["_ts"]
+            continue
+        if len(segments) == limit:
+            return segments, segments[-1]["_ts"]
+        segments.append({"id": f["id"], "from": f["captured_at"], "until": f["until_at"], "duration_s": f["duration_s"],
+                         "app": f["app"], "window_title": f["window_title"], "frames": 1, "frame_ids": [f["id"]],
+                         "excerpt": f["excerpt"], "_ts": f["_ts"]})
+    return segments, None
+
+
 def run_timeline(services: Services, args: TimelineArgs) -> dict:
     lo, hi, resolved = _range(args)
-    result = services.queries.timeline(lo, hi, args.app, None, args.limit, None)
-    frames = [
-        {"id": f["id"], "time": f["captured_at"], "until": f["until_at"], "duration_s": f["duration_s"], "app": f["app"],
-         "window_title": f["window_title"], "monitor": f["monitor"], "ocr_status": f["ocr_status"], "excerpt": f["excerpt"]}
-        for f in result["frames"]
-    ]
-    return {**_state_note(services), "resolved": resolved, "frames": frames, "count": len(frames), "more": result["next_cursor"] is not None}
+    if not args.group:
+        result = services.queries.timeline(lo, hi, args.app, None, args.limit, args.cursor)
+        frames = [
+            {"id": f["id"], "time": f["captured_at"], "until": f["until_at"], "duration_s": f["duration_s"], "app": f["app"],
+             "window_title": f["window_title"], "monitor": f["monitor"], "ocr_status": f["ocr_status"], "excerpt": f["excerpt"]}
+            for f in result["frames"]
+        ]
+        return {**_state_note(services), "resolved": resolved, "frames": frames, "count": len(frames),
+                "more": result["next_cursor"] is not None, "next_cursor": result["next_cursor"]}
+    # Grouped: read enough frames to fill `limit` segments (a window kept open for an hour is
+    # hundreds of frames), then fold them. The payload stays small whatever the period.
+    batch = min(2000, max(200, args.limit * 25))
+    result = services.queries.timeline(lo, hi, args.app, None, batch, args.cursor)
+    segments, cut = _segments(result["frames"], args.limit)
+    if cut is None and result["next_cursor"] is not None:
+        # The batch ended inside the last segment: continue from its oldest frame next time.
+        cut = segments[-1]["_ts"] if segments else result["next_cursor"]
+    for seg in segments:
+        seg.pop("_ts", None)
+    return {**_state_note(services), "resolved": resolved, "segments": segments, "count": len(segments),
+            "frames_seen": sum(s["frames"] for s in segments), "more": cut is not None, "next_cursor": cut,
+            "hint": "Each segment is one app + window kept on screen; pass an id to screen_frame_text for its full text."}
 
 
 def run_frame_text(services: Services, args: FrameArgs) -> dict:
@@ -185,7 +229,7 @@ def _ann(read_only: bool, destructive: bool = False, idempotent: bool | None = N
 TOOLS: list[Tool] = [
     Tool("screen_status", "Is Argus recording? State, OCR queue, last capture, disk and retention. Keywords: estado, grabando, pausado.\nWhether Argus is recording (watching, paused, private or disabled), OCR queue depth, last capture, disk usage and retention.\nSinónimos: estado, pantalla, está grabando, pausa, modo privado, espacio en disco.", Empty, _ann(True), run_status),
     Tool("screen_search", "Search everything that was on screen (OCR, titles, apps). Keywords: buscar en pantalla, qué vi, dónde leí.\nFull-text search over everything that was on screen (OCR text, window titles, app names), BM25-ranked (window title weighs most). Each hit is a *moment*: consecutive near-identical frames of one window collapsed together (first_at, last_at, count, frame_ids with the best frame first; `id` is that frame). `limit` counts moments. Best first step for 'that error I saw' or 'where did I read X'.\nSinónimos: buscar, pantalla, error que vi, texto que vi, dónde leí, recuperar texto, ventana, aplicación, ayer, hace un rato.", SearchArgs, _ann(True), run_search),
-    Tool("screen_timeline", "What was on screen during a period, newest first. Keywords: cronología, qué había en pantalla, secuencia.\nBrowse what was on screen during a period, newest first, with app, window title, duration and a text excerpt per frame. Use after screen_search/screen_recent when the user wants the sequence of events.\nSinónimos: línea de tiempo, qué estaba haciendo, cronología, historial de pantalla, ayer, esta mañana, hace 2 horas, aplicación, ventana.", TimelineArgs, _ann(True), run_timeline),
+    Tool("screen_timeline", "What was on screen during a period, newest first. Keywords: cronología, qué había en pantalla, secuencia.\nBrowse what was on screen during a period, newest first: consecutive frames of one app + window are folded into segments (from, until, duration, frames, excerpt), so a whole afternoon fits in one answer; group=false lists every frame; next_cursor pages further back. Use after screen_search/screen_recent when the user wants the sequence of events.\nSinónimos: línea de tiempo, qué estaba haciendo, cronología, historial de pantalla, ayer, esta mañana, hace 2 horas, aplicación, ventana.", TimelineArgs, _ann(True), run_timeline),
     Tool("screen_frame_text", "Full OCR text of one frame (optionally its blocks with bounding boxes). Use ids returned by the other tools.\nSinónimos: texto completo, recuperar texto, captura, pantalla, leer la ventana.", FrameArgs, _ann(True), run_frame_text),
     Tool("screen_recent", "What the user was just looking at (last N minutes of OCR). Keywords: qué estaba haciendo, hace un rato, ahora.\nWhat the user was just looking at: OCR text of the last frames in the past N minutes, deduplicated, most recent first. Use for 'what was I doing', 'what did I just read', 'hace un rato'.\nSinónimos: qué estaba haciendo, hace un rato, ahora mismo, lo último que vi, pantalla actual, ventana, recuperar texto.", RecentArgs, _ann(True), run_recent),
     Tool("screen_activity", "Time spent per app and window in a period, with a summary. Keywords: actividad, cuánto tiempo, en qué apps.\nTime spent per app in a period, with the top window titles per app, the longest sessions (consecutive frames of one app + window) and a one-line human summary. Durations come from how long each frame stayed on screen.\nSinónimos: actividad, en qué he perdido el tiempo, cuánto tiempo, aplicación, ventana, hoy, ayer, esta semana, resumen del día.", RangeArgs, _ann(True), run_activity),

@@ -95,7 +95,7 @@ class Queries:
                   FROM frames f {join} {where} ORDER BY f.captured_at {order} LIMIT ?"""
         with self.db.lock:
             rows = self.db.conn.execute(sql, [*params, limit + 1]).fetchall()
-        frames = [{**_frame_row(row), "excerpt": _excerpt(row["text"])} for row in rows[:limit]]
+        frames = [{**_frame_row(row), "excerpt": _excerpt(row["text"]), "_ts": float(row["captured_at"])} for row in rows[:limit]]
         next_cursor = rows[limit - 1]["captured_at"] if len(rows) > limit else None
         return {"frames": frames, "next_cursor": next_cursor}
 

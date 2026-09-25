@@ -23,7 +23,10 @@ def timeline(
     title: str | None = Query(None, max_length=1000),
 ):
     lo, hi = epoch_range(from_, to)
-    return services(request).queries.timeline(lo, hi, app, q, limit, cursor, ascending=order == "asc", title=title)
+    result = services(request).queries.timeline(lo, hi, app, q, limit, cursor, ascending=order == "asc", title=title)
+    for frame in result["frames"]:
+        frame.pop("_ts", None)
+    return result
 
 
 @router.get("/sessions")
