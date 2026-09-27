@@ -22,11 +22,14 @@ class Janitor:
         now = now or time.time()
         s = self.settings.get()
         deleted_by_age = deleted_by_cap = 0
-        if s.retention_days > 0:
-            cutoff = now - s.retention_days * 86400
-            deleted_by_age = self.frames.delete_frames(self.frames.frame_ids_older_than(cutoff))
-        cap_bytes = s.storage_cap_mb * 1024 * 1024
-        deleted_by_cap = self.frames.delete_frames(self.frames.oldest_frames_over_cap(cap_bytes))
+        # Keep selection and deletion together so a concurrent pin cannot
+        # land between the two and lose the frame it was meant to preserve.
+        with self.frames.db.lock:
+            if s.retention_days > 0:
+                cutoff = now - s.retention_days * 86400
+                deleted_by_age = self.frames.delete_frames(self.frames.frame_ids_older_than(cutoff))
+            cap_bytes = s.storage_cap_mb * 1024 * 1024
+            deleted_by_cap = self.frames.delete_frames(self.frames.oldest_frames_over_cap(cap_bytes))
         self.last_run = now
         self.last_deleted = deleted_by_age + deleted_by_cap
         if self.last_deleted:

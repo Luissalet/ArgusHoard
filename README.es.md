@@ -50,6 +50,9 @@ portapapeles ni tráfico de red.
   defecto) se borran, imágenes y texto, al arrancar y cada 10 minutos.
 - **Límite de disco**: si la carpeta de capturas supera `storage_cap_mb` se
   borran primero las más antiguas.
+- **Fijar una captura**: en su detalle, «☆ Fijar» la conserva frente a la
+  limpieza por antigüedad o espacio. Puedes desfijarla. Un borrado explícito
+  del tramo sí la elimina.
 - **Borrar un tramo**: `DELETE /api/frames?from&to`, «Borrar este día» en la
   línea de tiempo o la herramienta `screen_delete_range`. Es definitivo.
 
@@ -129,6 +132,7 @@ Todas las rutas escuchan solo en `127.0.0.1` y rechazan otros hosts u orígenes.
 | `GET /api/timeline?from&to&app&q&title&limit&cursor&order` | capturas con duración y extracto, paginación por cursor |
 | `GET /api/sessions?day` (o `from&to`) `&app` | capturas consecutivas de una misma aplicación y ventana agrupadas en sesiones (inicio, fin, duración, número, miniaturas) |
 | `GET /api/frames/{id}` · `/image` · `/thumb` | texto completo + bloques + anterior/siguiente; ficheros WebP |
+| `PATCH /api/frames/{id}/pin` | fijar o desfijar con `{ "pinned": true/false }` |
 | `GET /api/search?q&from&to&app&limit` | candidatos FTS5 reordenados con BM25 (título 3 / aplicación 2 / texto 1, IDF suavizado para que `rank` sea siempre un negativo real), `snippet()` con marcas `[ ]`; las pantallas casi idénticas de una misma ventana en 10 minutos se agrupan en un *momento* (`first_at`, `last_at`, `count`, `frame_ids`, la mejor primero); `limit` cuenta momentos |
 | `GET /api/apps?from&to` | tiempo por aplicación y títulos más frecuentes |
 | `GET /api/days` | días con datos (capturas, momentos ocultos, segundos) |
@@ -152,6 +156,7 @@ marcha y reenvía cada llamada a `POST /api/agent/call` con el token de
 | `screen_search` | búsqueda de texto completo con fragmentos; cada resultado es un momento (`first_at`, `last_at`, `count`, `frame_ids`) |
 | `screen_timeline` | qué había en pantalla y cuándo, con duraciones |
 | `screen_frame_text` | texto OCR completo de una captura (bloques opcionales) |
+| `screen_pin_frame` | fijar o desfijar una captura para conservarla durante la limpieza automática |
 | `screen_recent` | el texto de los últimos N minutos, sin repeticiones, lo más reciente primero |
 | `screen_activity` | tiempo por aplicación, ventanas principales, sesiones más largas y una línea de resumen |
 | `screen_days` | días con datos |

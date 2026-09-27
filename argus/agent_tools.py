@@ -52,6 +52,11 @@ class FrameArgs(BaseModel):
     blocks: bool = Field(False, description="Include OCR blocks with bounding boxes.")
 
 
+class PinArgs(BaseModel):
+    id: int = Field(..., ge=1, description="Frame id from screen_search, screen_timeline or screen_recent.")
+    pinned: bool = Field(..., description="True to keep the capture during automatic retention; false to restore normal cleanup.")
+
+
 class RecentArgs(BaseModel):
     minutes: int = Field(10, ge=1, le=1440, description="Look back this many minutes.")
     limit: int = Field(8, ge=1, le=50, description="Maximum distinct frames to return.")
@@ -180,6 +185,12 @@ def run_frame_text(services: Services, args: FrameArgs) -> dict:
     return frame
 
 
+def run_pin_frame(services: Services, args: PinArgs) -> dict:
+    if not services.frames.set_pinned(args.id, args.pinned):
+        return {"ok": False, "error": "Frame not found.", "id": args.id}
+    return {"ok": True, "id": args.id, "pinned": args.pinned}
+
+
 def run_recent(services: Services, args: RecentArgs) -> dict:
     since = time.time() - args.minutes * 60
     frames = services.queries.recent(since, args.limit)
@@ -231,6 +242,7 @@ TOOLS: list[Tool] = [
     Tool("screen_search", "Search everything that was on screen (OCR, titles, apps). Keywords: buscar en pantalla, qué vi, dónde leí.\nFull-text search over everything that was on screen (OCR text, window titles, app names), BM25-ranked (window title weighs most). Each hit is a *moment*: consecutive near-identical frames of one window collapsed together (first_at, last_at, count, frame_ids with the best frame first; `id` is that frame). `limit` counts moments. Best first step for 'that error I saw' or 'where did I read X'.\nSinónimos: buscar, pantalla, error que vi, texto que vi, dónde leí, recuperar texto, ventana, aplicación, ayer, hace un rato.", SearchArgs, _ann(True), run_search),
     Tool("screen_timeline", "What was on screen during a period, newest first. Keywords: cronología, qué había en pantalla, secuencia.\nBrowse what was on screen during a period, newest first: consecutive frames of one app + window are folded into segments (from, until, duration, frames, excerpt), so a whole afternoon fits in one answer; group=false lists every frame; next_cursor pages further back. Use after screen_search/screen_recent when the user wants the sequence of events.\nSinónimos: línea de tiempo, qué estaba haciendo, cronología, historial de pantalla, ayer, esta mañana, hace 2 horas, aplicación, ventana.", TimelineArgs, _ann(True), run_timeline),
     Tool("screen_frame_text", "Full OCR text of one frame (optionally its blocks with bounding boxes). Use ids returned by the other tools.\nSinónimos: texto completo, recuperar texto, captura, pantalla, leer la ventana.", FrameArgs, _ann(True), run_frame_text),
+    Tool("screen_pin_frame", "Pin or unpin a capture by id so automatic cleanup preserves it.\nAn explicit delete-range still removes pinned captures. Use only when the user asks to keep or unpin one.\nSinónimos: fijar captura, guardar pantalla, conservar captura, desfijar.", PinArgs, _ann(False, False, True), run_pin_frame),
     Tool("screen_recent", "What the user was just looking at (last N minutes of OCR). Keywords: qué estaba haciendo, hace un rato, ahora.\nWhat the user was just looking at: OCR text of the last frames in the past N minutes, deduplicated, most recent first. Use for 'what was I doing', 'what did I just read', 'hace un rato'.\nSinónimos: qué estaba haciendo, hace un rato, ahora mismo, lo último que vi, pantalla actual, ventana, recuperar texto.", RecentArgs, _ann(True), run_recent),
     Tool("screen_activity", "Time spent per app and window in a period, with a summary. Keywords: actividad, cuánto tiempo, en qué apps.\nTime spent per app in a period, with the top window titles per app, the longest sessions (consecutive frames of one app + window) and a one-line human summary. Durations come from how long each frame stayed on screen.\nSinónimos: actividad, en qué he perdido el tiempo, cuánto tiempo, aplicación, ventana, hoy, ayer, esta semana, resumen del día.", RangeArgs, _ann(True), run_activity),
     Tool("screen_days", "Days that have screen data, with frames, hidden ticks (excluded apps) and seconds on screen per day.\nSinónimos: días, qué días hay, historial, calendario, pantalla.", Empty, _ann(True), run_days),

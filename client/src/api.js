@@ -35,6 +35,7 @@ export const api = {
   timeline: (params) => request("GET", "/api/timeline", { params }),
   sessions: (params) => request("GET", "/api/sessions", { params }),
   frame: (id) => request("GET", `/api/frames/${id}`),
+  pinFrame: (id, pinned) => request("PATCH", `/api/frames/${id}/pin`, { body: { pinned } }),
   search: (params) => request("GET", "/api/search", { params }),
   apps: (params) => request("GET", "/api/apps", { params }),
   days: () => request("GET", "/api/days"),

@@ -46,6 +46,9 @@ clipboard and network traffic are never touched.
   images and text — by a janitor that runs at start and every 10 minutes.
 - **Storage cap**: when the frames folder exceeds `storage_cap_mb` the oldest
   frames are deleted first.
+- **Pin a frame**: use “☆ Fijar” in its detail view to preserve it through
+  automatic age or storage cleanup; unpin to restore normal cleanup. An
+  explicit range deletion still removes pinned frames.
 - **Delete range**: `DELETE /api/frames?from&to`, "Borrar este día" in the
   timeline, or the `screen_delete_range` tool. Permanent.
 
@@ -120,6 +123,7 @@ All routes are bound to `127.0.0.1` and refuse other hosts/origins.
 | `GET /api/timeline?from&to&app&q&title&limit&cursor&order` | frames with duration and excerpt, cursor pagination |
 | `GET /api/sessions?day` (or `from&to`) `&app` | consecutive frames of one app + window grouped into sessions (start, end, duration, count, preview thumbs) |
 | `GET /api/frames/{id}` · `/image` · `/thumb` | full text + blocks + prev/next; WebP files |
+| `PATCH /api/frames/{id}/pin` | pin or unpin with `{ "pinned": true/false }` |
 | `GET /api/search?q&from&to&app&limit` | FTS5 candidates re-ranked with BM25 (title 3 / app 2 / text 1, smoothed IDF so `rank` is always a real negative), `snippet()` with `[ ]` markers; consecutive near-identical hits of one window within 10 min collapse into one *moment* (`first_at`, `last_at`, `count`, `frame_ids` best first); `limit` counts moments |
 | `GET /api/apps?from&to` | time by app + top window titles |
 | `GET /api/days` | days with data (frames, hidden ticks, seconds) |
@@ -144,6 +148,7 @@ proxies every call to `POST /api/agent/call` with the token from
 | `screen_search` | full-text search with snippets; each hit is a moment (`first_at`, `last_at`, `count`, `frame_ids`) |
 | `screen_timeline` | what was on screen when, with durations |
 | `screen_frame_text` | full OCR text of a frame (optionally blocks) |
+| `screen_pin_frame` | pin or unpin a capture to preserve it through automatic cleanup |
 | `screen_recent` | the last N minutes' text, deduplicated, most recent first |
 | `screen_activity` | time by app + top windows + longest sessions + one-line summary |
 | `screen_days` | days that have data |

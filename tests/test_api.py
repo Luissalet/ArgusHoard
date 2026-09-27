@@ -120,7 +120,7 @@ def test_agent_tools_and_call_auth(client):
     catalog = client.get("/api/agent/tools").json()
     names = [t["name"] for t in catalog["tools"]]
     assert names == [
-        "screen_status", "screen_search", "screen_timeline", "screen_frame_text", "screen_recent",
+        "screen_status", "screen_search", "screen_timeline", "screen_frame_text", "screen_pin_frame", "screen_recent",
         "screen_activity", "screen_days", "screen_pause", "screen_resume", "screen_delete_range",
     ]
     assert all("Sinónimos:" in t["description"] for t in catalog["tools"])
@@ -154,3 +154,17 @@ def test_agent_tools_and_call_auth(client):
     assert paused["state"] == "paused"
     missing = client.post("/api/agent/call", json={"name": "screen_frame_text", "arguments": {"id": 4242}}, headers=auth)
     assert missing.status_code == 404
+
+
+def test_pin_frame_via_api_and_agent(client):
+    stored = ticks(client.services, 1, start=time.time() - 60)
+    frame_id = stored[0]
+    response = client.patch(f"/api/frames/{frame_id}/pin", json={"pinned": True})
+    assert response.status_code == 200 and response.json()["pinned"] is True
+    assert client.get(f"/api/frames/{frame_id}").json()["pinned"] is True
+    assert client.get("/api/timeline").json()["frames"][0]["pinned"] is True
+    token = client.services.token
+    response = client.post("/api/agent/call", json={"name": "screen_pin_frame", "arguments": {"id": frame_id, "pinned": False}}, headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200 and response.json()["pinned"] is False
+    assert client.get(f"/api/frames/{frame_id}").json()["pinned"] is False
+    assert client.patch("/api/frames/999999/pin", json={"pinned": True}).status_code == 404

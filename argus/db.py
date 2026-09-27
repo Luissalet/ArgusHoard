@@ -60,6 +60,11 @@ MIGRATIONS: list[str] = [
       ticks INTEGER NOT NULL DEFAULT 0
     );
     """,
+    # 2: preserve chosen frames through automatic retention
+    """
+    ALTER TABLE frames ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0;
+    CREATE INDEX frames_pinned_captured ON frames(pinned, captured_at);
+    """,
 ]
 
 

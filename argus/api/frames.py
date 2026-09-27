@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Query, Request
+from pydantic import BaseModel
 from fastapi.responses import FileResponse
 
 from .deps import epoch_range, services
 
 router = APIRouter(prefix="/api")
+
+
+class PinBody(BaseModel):
+    pinned: bool
 
 
 @router.get("/timeline")
@@ -51,6 +56,14 @@ def frame(request: Request, frame_id: int, blocks: bool = True):
     if data is None:
         raise HTTPException(404, "Frame not found.")
     return {**data, **svc.queries.neighbours(frame_id)}
+
+
+@router.patch("/frames/{frame_id}/pin")
+def pin_frame(request: Request, frame_id: int, body: PinBody):
+    svc = services(request)
+    if not svc.frames.set_pinned(frame_id, body.pinned):
+        raise HTTPException(404, "Frame not found.")
+    return {"ok": True, "id": frame_id, "pinned": body.pinned}
 
 
 def _file(request: Request, frame_id: int, thumb: bool):

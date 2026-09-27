@@ -31,6 +31,7 @@ export default function FrameViewer({ frameId, onClose, onNavigate }) {
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [showBoxes, setShowBoxes] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [savingPin, setSavingPin] = useState(false);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -76,6 +77,20 @@ export default function FrameViewer({ frameId, onClose, onNavigate }) {
     }
   };
 
+  const togglePin = async () => {
+    if (!frame || savingPin) return;
+    setSavingPin(true);
+    setError(null);
+    try {
+      const result = await api.pinFrame(frame.id, !frame.pinned);
+      setFrame((current) => current?.id === result.id ? { ...current, pinned: result.pinned } : current);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSavingPin(false);
+    }
+  };
+
   return (
     <dialog ref={dialogRef} onClose={onClose} aria-label="Detalle de la captura" onClick={(e) => e.target === dialogRef.current && onClose()}>
       <div className="flex max-h-[calc(100dvh-24px)] flex-col">
@@ -90,6 +105,7 @@ export default function FrameViewer({ frameId, onClose, onNavigate }) {
             )}
           </div>
           <div className="flex items-center gap-2">
+            <button type="button" className="btn btn-sm" disabled={!frame || savingPin} onClick={togglePin} aria-pressed={Boolean(frame?.pinned)} title="Las capturas fijadas se conservan durante la limpieza automática">{frame?.pinned ? "★ Fijada" : "☆ Fijar"}</button>
             <button type="button" className="btn btn-sm" disabled={!frame?.prev} onClick={() => onNavigate(frame.prev)} aria-label="Captura anterior">← Anterior</button>
             <button type="button" className="btn btn-sm" disabled={!frame?.next} onClick={() => onNavigate(frame.next)} aria-label="Captura siguiente">Siguiente →</button>
             <button type="button" className="btn btn-sm" onClick={onClose} aria-label="Cerrar">Cerrar</button>

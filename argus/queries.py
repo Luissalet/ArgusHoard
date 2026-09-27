@@ -35,6 +35,7 @@ def _frame_row(row, tz=None) -> dict:
     duration = max(0.0, float(row["until_at"]) - float(row["captured_at"]))
     return {
         "id": row["id"],
+        "pinned": bool(row["pinned"]),
         "captured_at": iso_local(row["captured_at"], tz),
         "until_at": iso_local(row["until_at"], tz),
         "duration_s": round(duration, 1),

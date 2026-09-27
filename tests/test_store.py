@@ -110,6 +110,26 @@ def test_delete_range(services):
     assert services.queries.frame(a) and services.queries.frame(c)
 
 
+def test_pinned_frame_survives_retention_and_cap_until_explicitly_deleted(services):
+    now = time.time()
+    pinned = add_frame(services, now - 40 * 86400, "editor", "recordatorio", ["conservar"])
+    unpinned = add_frame(services, now - 40 * 86400 + 10, "editor", "temporal", ["borrar"])
+    assert services.frames.set_pinned(pinned, True)
+    assert services.queries.frame(pinned)["pinned"] is True
+    services.settings.update({"retention_days": 30})
+    report = services.janitor.run(now=now)
+    assert report["deleted_by_age"] == 1
+    assert services.queries.frame(unpinned) is None
+    assert services.queries.frame(pinned) is not None
+    assert services.frames.oldest_frames_over_cap(0) == []
+    assert services.frames.disk_usage() > 0  # a pin may exceed the automatic cap
+    assert services.frames.set_pinned(pinned, False)
+    assert services.frames.oldest_frames_over_cap(0) == [pinned]
+    assert services.frames.set_pinned(pinned, True)
+    assert services.janitor.delete_range(now - 41 * 86400, now - 39 * 86400) == 1
+    assert services.queries.frame(pinned) is None
+
+
 def test_pending_frames_are_ocrd_after_restart(services):
     """Frames stored before a crash get OCR'd from the WebP on disk, blocks scaled to original size."""
     image = render_screen(["Recuperar despues de reiniciar"], size=(1920, 1080), font_size=40)

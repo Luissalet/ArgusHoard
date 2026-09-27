@@ -158,6 +158,13 @@ class FrameStore:
             )
 
     # ---------- deletion / retention ----------
+    def set_pinned(self, frame_id: int, pinned: bool) -> bool:
+        with self.db.lock:
+            changed = self.db.conn.execute(
+                "UPDATE frames SET pinned = ? WHERE id = ?", (int(pinned), frame_id)
+            ).rowcount
+        return changed > 0
+
     def delete_frames(self, ids: list[int]) -> int:
         if not ids:
             return 0
@@ -199,7 +206,7 @@ class FrameStore:
 
     def frame_ids_older_than(self, cutoff: float) -> list[int]:
         with self.db.lock:
-            rows = self.db.conn.execute("SELECT id FROM frames WHERE captured_at < ? ORDER BY captured_at", (cutoff,)).fetchall()
+            rows = self.db.conn.execute("SELECT id FROM frames WHERE captured_at < ? AND pinned = 0 ORDER BY captured_at", (cutoff,)).fetchall()
         return [row["id"] for row in rows]
 
     def oldest_frames_over_cap(self, cap_bytes: int) -> list[int]:
@@ -209,7 +216,7 @@ class FrameStore:
             return []
         excess = total - cap_bytes
         with self.db.lock:
-            rows = self.db.conn.execute("SELECT id, bytes FROM frames ORDER BY captured_at ASC").fetchall()
+            rows = self.db.conn.execute("SELECT id, bytes FROM frames WHERE pinned = 0 ORDER BY captured_at ASC").fetchall()
         ids, freed = [], 0
         for row in rows:
             if freed >= excess:
