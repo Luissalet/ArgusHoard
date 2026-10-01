@@ -1,41 +1,42 @@
 @import "tailwindcss";
+@import "./hoard-theme.css";
 
-/* Tokens from DESIGN.md — cool paper with a deep indigo/violet accent. */
+/* Own variables point at the shared --hoard-* tokens (hoard-theme.css). */
 :root {
-  --accent: #4a3f8f;
-  --accent-hover: #3a3172;
-  --ink: #2a2740;
-  --muted: #6b6880;
-  --paper: #fbfafd;
-  --white: #ffffff;
-  --line: #e5e2ef;
-  --soft: #efedf6;
-  --sidebar: #f3f1f9;
-  --nav-active: #e3dff3;
-  --nav-active-ink: #3a3072;
-  --nav-hover: #eae7f4;
-  --field-line: #d8d3e8;
-  --field-ink: #2f2a4f;
-  --placeholder: #857f9c;
-  --supporting-ink: #666280;
-  --focus: #6b5fc0;
-  --button-line: #dcd8e8;
-  --panel: #f5f3fa;
-  --watch-bg: #e6e2f5;
-  --watch-ink: #3a3072;
-  --pause-bg: #f7ecd6;
-  --pause-ink: #7a5a17;
-  --private-bg: #2a2740;
-  --private-ink: #f3f1f9;
-  --off-bg: #ecebf0;
-  --off-ink: #5c5970;
-  --ok-bg: #e4efe6;
-  --ok-ink: #2f5f3a;
-  --danger-bg: #fbeceb;
-  --danger-ink: #8a3a2c;
-  --danger-line: #e8c8c2;
-  --bar-bg: #e7e4f1;
-  --highlight: #f6e9a8;
+  --accent: var(--hoard-accent);
+  --accent-hover: var(--hoard-accent-strong);
+  --ink: var(--hoard-text);
+  --muted: var(--hoard-text-muted);
+  --paper: var(--hoard-deep);
+  --white: var(--hoard-surface);
+  --line: var(--hoard-border);
+  --soft: var(--hoard-elevated);
+  --sidebar: var(--hoard-surface);
+  --nav-active: var(--hoard-elevated);
+  --nav-active-ink: var(--hoard-text);
+  --nav-hover: var(--hoard-elevated);
+  --field-line: var(--hoard-border);
+  --field-ink: var(--hoard-text);
+  --placeholder: var(--hoard-text-dim);
+  --supporting-ink: var(--hoard-text-muted);
+  --focus: var(--hoard-accent);
+  --button-line: var(--hoard-border);
+  --panel: var(--hoard-surface);
+  --watch-bg: var(--hoard-accent-soft);
+  --watch-ink: var(--hoard-accent-strong);
+  --pause-bg: rgba(212,168,67,.14);
+  --pause-ink: #e0bb62;
+  --private-bg: var(--hoard-sunken);
+  --private-ink: var(--hoard-text);
+  --off-bg: var(--hoard-elevated);
+  --off-ink: var(--hoard-text-muted);
+  --ok-bg: rgba(74,158,109,.16);
+  --ok-ink: #7fcf9f;
+  --danger-bg: rgba(196,70,58,.16);
+  --danger-ink: #ee8b80;
+  --danger-line: rgba(196,70,58,.4);
+  --bar-bg: var(--hoard-elevated);
+  --highlight: rgba(212,168,67,.35);
 }
 
 @layer base {
@@ -44,7 +45,7 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family: "Segoe UI", system-ui, sans-serif;
+  font-family: var(--hoard-font-sans);
   font-size: 14px;
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
@@ -64,10 +65,10 @@ mark { background: var(--highlight); color: inherit; padding: 0 1px; border-radi
 }
 .btn:hover { background: var(--soft); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
-.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--white); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--hoard-accent-ink); }
 .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 .btn-danger { background: var(--danger-bg); border-color: var(--danger-line); color: var(--danger-ink); }
-.btn-danger:hover { background: #f5dcd8; }
+.btn-danger:hover { background: rgba(196,70,58,.26); }
 .btn-sm { min-height: 30px; padding: 4px 10px; font-size: 12px; }
 .btn-link { background: none; border: 0; padding: 0; min-height: 0; color: var(--accent); font-weight: 600; cursor: pointer; font: inherit; }
 .btn-link:hover { text-decoration: underline; }
@@ -122,17 +123,45 @@ select.field { appearance: auto; }
 
 .switch { position: relative; width: 44px; height: 24px; border-radius: 12px; border: 0; background: var(--bar-bg); cursor: pointer; transition: background 0.16s; flex: none; padding: 0; }
 .switch[aria-checked="true"] { background: var(--accent); }
-.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--white); transition: left 0.16s; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--hoard-text); transition: left 0.16s; }
 .switch[aria-checked="true"]::after { left: 23px; }
 .switch-big { width: 64px; height: 34px; border-radius: 17px; }
 .switch-big::after { width: 28px; height: 28px; }
 .switch-big[aria-checked="true"]::after { left: 33px; }
 .switch-big[aria-checked="true"] { background: var(--private-bg); }
 
-.toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: #2a2740; color: #fff; padding: 10px 16px; border-radius: 8px; box-shadow: 0 8px 28px #1d1a3a2a; font-size: 13px; z-index: 50; max-width: calc(100vw - 32px); }
+.toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--hoard-elevated); color: var(--hoard-text); border: 1px solid var(--hoard-border); padding: 10px 16px; border-radius: 8px; box-shadow: var(--hoard-shadow); font-size: 13px; z-index: 50; max-width: calc(100vw - 32px); }
 
-dialog { margin: auto; border: 0; border-radius: 12px; padding: 0; width: min(1200px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); box-shadow: 0 24px 70px #1d1a3a26; color: var(--ink); background: var(--white); }
-dialog::backdrop { background: #1d1a3a66; }
+dialog { margin: auto; border: 0; border-radius: 12px; padding: 0; width: min(1200px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); box-shadow: var(--hoard-shadow); color: var(--ink); background: var(--white); }
+dialog::backdrop { background: rgba(0,0,0,.6); }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 }
+
+/* Hoard family chrome (Writer's look): 220 px sidebar, 64 px brand row,
+   serif accent brand name, 10 px cards, quiet nav. */
+html { color-scheme: dark; }
+@media (min-width: 768px) {
+  .md\:grid-cols-\[224px_minmax\(0\,1fr\)\] { grid-template-columns: var(--hoard-sidebar-w) minmax(0, 1fr); }
+}
+aside { background: var(--hoard-surface) !important; border-color: var(--hoard-border) !important; }
+aside > div:first-child { box-sizing: border-box; min-height: var(--hoard-header-h); padding-top: 0; padding-bottom: 0; border-bottom: 1px solid var(--hoard-border); }
+@media (min-width: 768px) { aside > div:first-child { height: var(--hoard-header-h); } aside nav { padding-top: 12px; } }
+aside > div:first-child > span { width: 32px; height: 32px; border-radius: var(--hoard-radius); background: var(--hoard-accent) !important; color: var(--hoard-accent-ink) !important; font-family: var(--hoard-font-serif) !important; }
+aside > div:first-child > div > div:first-child { font-family: var(--hoard-font-serif); font-weight: 700; color: var(--hoard-accent); font-size: 15px; }
+.nav-link { min-height: 40px; border-radius: var(--hoard-radius); font-size: 14px !important; font-weight: 400; color: var(--hoard-text-muted); }
+.nav-link:hover { background: var(--hoard-elevated); color: var(--hoard-text); }
+.nav-link[aria-current="page"] { background: var(--hoard-elevated); color: var(--hoard-text); font-weight: 500; }
+.nav-link[aria-current="page"] svg { color: var(--hoard-accent); }
+main h1 { font-family: var(--hoard-font-serif); font-weight: 700 !important; font-size: 30px !important; color: var(--hoard-text); }
+.panel, .panel-white, .frame-card { border-radius: var(--hoard-radius-lg); }
+.panel:hover, .panel-white:hover { border-color: var(--hoard-border-hover); }
+.btn { border-radius: var(--hoard-radius); }
+.btn:hover { background: var(--hoard-elevated); border-color: var(--hoard-border-hover); }
+.btn-primary:hover { background: var(--hoard-accent-strong); border-color: var(--hoard-accent-strong); }
+.field { border-radius: var(--hoard-radius); background: var(--hoard-sunken); }
+.field:focus { border-color: var(--hoard-accent); outline: none; }
+.chip { border-radius: var(--hoard-radius-sm); background: var(--hoard-elevated); }
+.chip-ok { background: rgba(74,158,109,.16); } .chip-warn { background: rgba(212,168,67,.14); } .chip-danger { background: rgba(196,70,58,.16); }
+.frame-card[aria-current="true"] { border-color: var(--hoard-accent); box-shadow: 0 0 0 1px var(--hoard-accent); }
+th { color: var(--hoard-text-dim); font-size: 12px; font-weight: 500; }
