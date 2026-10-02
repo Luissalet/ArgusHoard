@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from .db import Database
 
-OcrBackendName = Literal["auto", "rapidocr", "winocr", "tesseract"]
+OcrBackendName = Literal["auto", "rapidocr", "winocr", "tesseract", "family"]
 CaptureScope = Literal["active", "all"]  # active = only the monitor with the foreground window
 
 

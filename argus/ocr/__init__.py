@@ -1,4 +1,4 @@
-"""OCR backend selection with automatic fallback."""
+"""OCR backend selection with automatic fallback: the local engines first, Kafka's through the hub as the last resort."""
 
 from __future__ import annotations
 
@@ -6,15 +6,16 @@ from .base import NullOcr, OcrBackend, OcrResult, join_blocks
 
 __all__ = ["OcrBackend", "OcrResult", "NullOcr", "join_blocks", "select_ocr", "ocr_availability"]
 
-ORDER = ["winocr", "rapidocr", "tesseract"]
+ORDER = ["winocr", "rapidocr", "tesseract", "family"]
 
 
 def _classes() -> dict[str, type[OcrBackend]]:
+    from .family import FamilyOcr
     from .rapid import RapidOcr
     from .tesseract import TesseractOcr
     from .winocr_backend import WinOcr
 
-    return {"rapidocr": RapidOcr, "winocr": WinOcr, "tesseract": TesseractOcr}
+    return {"rapidocr": RapidOcr, "winocr": WinOcr, "tesseract": TesseractOcr, "family": FamilyOcr}
 
 
 def ocr_availability() -> dict[str, dict]:
@@ -40,7 +41,7 @@ def select_ocr(requested: str = "auto", language: str = "es") -> tuple[OcrBacken
             notes.append(f"{name}: {reason}")
             continue
         try:
-            engine = cls(language) if name in ("winocr", "tesseract") else cls()
+            engine = cls(language) if name in ("winocr", "tesseract", "family") else cls()
         except Exception as error:  # broken install
             notes.append(f"{name}: failed to start ({error})")
             continue
