@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import re
-import time
 
 from .db import Database
-from .search import Candidate, group_moments, idf, query_terms, rank_candidates
+from .hoard_link.docs import textsearch
+from .search import Candidate, group_moments, idf, rank_candidates, scoring_terms
 from .sessions import group_sessions
 from .timeparse import iso_local
 
@@ -18,17 +18,6 @@ def _excerpt(text: str | None, limit: int = EXCERPT_CHARS) -> str:
         return ""
     flat = re.sub(r"\s+", " ", text).strip()
     return flat if len(flat) <= limit else flat[: limit - 1].rstrip() + "…"
-
-
-def fts_query(raw: str) -> str:
-    """Build a safe FTS5 MATCH expression: quoted tokens, implicit AND, prefix on the last."""
-    tokens = [t for t in re.findall(r"[\w'’\-]+", raw, flags=re.UNICODE) if t.strip("-'’")]
-    if not tokens:
-        return ""
-    parts = [f'"{t.replace(chr(34), "")}"' for t in tokens]
-    if len(tokens[-1]) >= 3:
-        parts[-1] += "*"
-    return " ".join(parts)
 
 
 def _frame_row(row, tz=None) -> dict:
@@ -85,7 +74,7 @@ class Queries:
         if cursor is not None:
             clauses.append("f.captured_at < ?" if not ascending else "f.captured_at > ?")
             params.append(cursor)
-        match = fts_query(q or "")
+        match = textsearch.fts_query(q or "", mode="prefix")
         join = ""
         if match:
             join = "JOIN frames_fts x ON x.rowid = f.id AND frames_fts MATCH ?"
@@ -134,21 +123,10 @@ class Queries:
             ).fetchone()
         return {"prev": prev["id"] if prev else None, "next": nxt["id"] if nxt else None}
 
-    def _avg_text_tokens(self) -> float:
-        """Average OCR text length in tokens (chars / 6), cached for a minute."""
-        cached = getattr(self, "_avg_cache", None)
-        if cached and time.time() - cached[0] < 60:
-            return cached[1]
-        with self.db.lock:
-            row = self.db.conn.execute("SELECT AVG(LENGTH(text)) AS chars FROM frames_fts").fetchone()
-        value = max(1.0, float(row["chars"] or 0) / 6.0)
-        self._avg_cache = (time.time(), value)
-        return value
-
     def search(self, q: str, start: float | None, end: float | None, app: str | None, limit: int, group_window_s: int = 600) -> dict:
         """FTS5 finds candidates; `argus.search` re-ranks them and collapses runs into moments."""
-        match = fts_query(q)
-        terms = query_terms(q)
+        match = textsearch.fts_query(q, mode="prefix")
+        terms = scoring_terms(q)
         if not match or not terms:
             return {"query": q, "hits": [], "frames_total": 0}
         clauses, params = self._range_clause(start, end, app)
@@ -173,7 +151,7 @@ class Queries:
                       re.sub(r"\s+", " ", row["snip"] or "").strip(), dict(row))
             for row in rows
         ]
-        ranked = rank_candidates(candidates, terms, idfs, self._avg_text_tokens())
+        ranked = rank_candidates(candidates, terms, idfs)
         moments = group_moments(ranked, group_window_s)[:limit]
         hits = []
         for moment in moments:

@@ -1,7 +1,8 @@
 """Perceptual hashing, change detection and WebP storage for captured frames.
 
 Two measures, both Pillow/numpy only:
-- `dhash` (16x16 difference hash, 256 bits) is stored per frame as `phash`.
+- `dhash` (16x16 difference hash, 256 bits) is stored per frame as `phash`: the shared `hoard_link.docs.imaging.dhash` / `hamming`
+  (same hex values as the ones already stored); this module keeps what is Argus' own.
 - `signature` (a 384x216 grey grid, 5x5 px cells at 1080p) is kept in memory for the previous frame of
   each monitor; `changed_cells` counts cells whose grey level moved by more than
   `LEVEL`. A whole-screen hash is too coarse for text: a caret blink and a new
@@ -18,25 +19,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-HASH_SIZE = 16  # 16x16 differences -> 256 bits
 GRID = (384, 216)
 LEVEL = 12  # grey-level delta that counts as a changed cell
-
-
-def dhash(image: Image.Image, size: int = HASH_SIZE) -> str:
-    small = image.convert("L").resize((size + 1, size), Image.Resampling.LANCZOS)
-    pixels = np.asarray(small, dtype=np.int16)
-    bits = (pixels[:, 1:] > pixels[:, :-1]).flatten()
-    value = 0
-    for bit in bits:
-        value = (value << 1) | int(bit)
-    return f"{value:0{size * size // 4}x}"
-
-
-def hamming(a: str, b: str) -> int:
-    if len(a) != len(b):
-        return max(len(a), len(b)) * 4
-    return bin(int(a, 16) ^ int(b, 16)).count("1")
 
 
 def signature(image: Image.Image, grid: tuple[int, int] = GRID) -> np.ndarray:

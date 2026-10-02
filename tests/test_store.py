@@ -1,7 +1,7 @@
 import time
 
 from argus.capture.fixtures import render_screen
-from argus.images import dhash
+from argus.hoard_link.docs.imaging import dhash
 from argus.store import Block
 
 

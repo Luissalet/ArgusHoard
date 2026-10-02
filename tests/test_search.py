@@ -3,8 +3,9 @@
 import time
 
 from argus.capture.fixtures import render_screen
-from argus.images import dhash
-from argus.search import Candidate, group_moments, query_terms, tokens
+from argus.hoard_link.docs.imaging import dhash
+from argus.hoard_link.docs.textsearch import tokens
+from argus.search import Candidate, group_moments, scoring_terms
 from argus.store import Block
 
 IMAGE = render_screen(["x"])
@@ -79,7 +80,27 @@ def test_group_moments_orders_by_best_rank_and_time_window():
     assert moments[0]["count"] == 2 and moments[0]["first_at"] == 0 and moments[0]["last_at"] == 300
 
 
-def test_query_terms_and_tokens_fold_like_fts():
+def test_scoring_terms_and_tokens_fold_like_fts():
     assert tokens("Línea de TIEMPO, auto-save!") == ["linea", "de", "tiempo", "auto", "save"]
-    assert query_terms("error que vi") == [("error", False), ("que", False), ("vi", False)]
-    assert query_terms("presupue")[-1] == ("presupue", True)
+    # stopwords are dropped from a multi-word query, words under three letters are exact, longer ones are prefixes
+    assert scoring_terms("error que vi") == [("error", True), ("vi", False)]
+    assert scoring_terms("presupue")[-1] == ("presupue", True)
+    # a query made only of stopwords still searches for them
+    assert scoring_terms("que la") == [("que", True), ("la", False)]
+
+
+def test_search_drops_stopwords_from_multi_word_queries_and_keeps_stopword_only_queries(services):
+    """The shared word rules: "error que vi" needs the frame to have "error" and "vi", not the filler word "que"."""
+    t = noon()
+    hit = add(services, t - 300, "terminal", "bash", "salio un error raro y lo vi en pantalla")
+    add(services, t - 200, "terminal", "bash", "otro error distinto")
+    result = services.queries.search("error que vi", None, None, None, 10)
+    assert [h["id"] for h in result["hits"]] == [hit]
+    assert services.queries.search("que", None, None, None, 10)["hits"] == []  # no frame has it: a plain miss, not an error
+
+
+def test_search_matches_accents_and_word_beginnings(services):
+    t = noon()
+    hit = add(services, t - 100, "code", "Línea de TIEMPO", "presupuesto mensual")
+    assert [h["id"] for h in services.queries.search("linea tiempo", None, None, None, 10)["hits"]] == [hit]
+    assert [h["id"] for h in services.queries.search("presupue", None, None, None, 10)["hits"]] == [hit]

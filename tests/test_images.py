@@ -1,7 +1,8 @@
 from PIL import ImageDraw
 
 from argus.capture.fixtures import render_screen
-from argus.images import changed_cells, dhash, fit_width, hamming, is_near_duplicate, signature
+from argus.hoard_link.docs.imaging import dhash, hamming
+from argus.images import changed_cells, fit_width, is_near_duplicate, signature
 
 
 def screen(lines):

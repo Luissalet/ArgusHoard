@@ -3,8 +3,9 @@
 FTS5 finds the candidates, but its bm25() clamps a non-positive IDF to 1e-6:
 when a term is on more than half of the frames (two hours on one page) every
 rank collapses to about -1e-6, which rounds to -0.0 and drowns that term in
-multi-word queries. So candidates are re-scored here with BM25 using a smoothed
-IDF (always positive) and per-column weights: window title 3, app 2, text 1.
+multi-word queries. So candidates are re-scored with the shared BM25
+(`hoard_link.docs.textsearch.bm25_rescore`: smoothed IDF, always positive, taken
+from whole-database counts) and per-column weights: window title 3, app 2, text 1.
 Rank keeps the FTS5 convention: negative, lower is better.
 
 Consecutive near-identical hits (same app, window and snippet text within ten
@@ -15,42 +16,19 @@ the frame ids, best-ranked first.
 from __future__ import annotations
 
 import math
-import re
-import unicodedata
 from dataclasses import dataclass, field
 
-K1 = 1.2
-B = 0.75
+from .hoard_link.docs import textsearch
+
 WEIGHTS = {"window_title": 3.0, "app": 2.0, "text": 1.0}
 GROUP_WINDOW_S = 600
 IDF_FLOOR = 0.1  # a term on every frame still ranks by where/how often it appears, with readable numbers
 
 
-def fold(text: str) -> str:
-    """Lowercase, strip diacritics (like unicode61 remove_diacritics)."""
-    return "".join(ch for ch in unicodedata.normalize("NFKD", (text or "").lower()) if not unicodedata.combining(ch))
-
-
-def tokens(text: str) -> list[str]:
-    return re.findall(r"[^\W_]+", fold(text), flags=re.UNICODE)
-
-
-def query_terms(raw: str) -> list[tuple[str, bool]]:
-    """(term, is_prefix) pairs mirroring `fts_query`: the last token of 3+ chars is a prefix."""
-    words = [t for t in re.findall(r"[\w'’\-]+", raw, flags=re.UNICODE) if t.strip("-'’")]
-    out: list[tuple[str, bool]] = []
-    for index, word in enumerate(words):
-        parts = tokens(word)
-        for j, part in enumerate(parts):
-            last = index == len(words) - 1 and j == len(parts) - 1
-            out.append((part, last and len(word) >= 3))
-    return out
-
-
-def term_frequency(term: str, prefix: bool, toks: list[str]) -> int:
-    if prefix:
-        return sum(1 for t in toks if t.startswith(term))
-    return sum(1 for t in toks if t == term)
+def scoring_terms(raw: str) -> list[tuple[str, bool]]:
+    """(folded stem, is_prefix) for the words `textsearch.fts_query(raw, mode="prefix")` matches: the same words, so the
+    document counts behind the IDF and the scoring agree with what FTS5 found."""
+    return [(term, len(term) >= textsearch.PREFIX_MIN_CHARS) for term in textsearch.query_terms(raw)]
 
 
 @dataclass
@@ -65,33 +43,20 @@ class Candidate:
 
 
 def idf(total: int, hits: int) -> float:
+    """Smoothed BM25 IDF over the whole database (`total` frames, `hits` containing the term)."""
     return max(IDF_FLOOR, math.log(1.0 + (total - hits + 0.5) / (hits + 0.5)))
 
 
-def score(candidate: Candidate, terms: list[tuple[str, bool]], idfs: dict[str, float], avg_text_len: float) -> float:
-    columns = {"window_title": tokens(candidate.window_title), "app": tokens(candidate.app), "text": tokens(candidate.text)}
-    text_len = len(columns["text"])
-    norm = K1 * (1 - B + B * (text_len / avg_text_len if avg_text_len else 1.0))
-    total = 0.0
-    for term, prefix in terms:
-        weighted_tf = 0.0
-        for column, weight in WEIGHTS.items():
-            tf = term_frequency(term, prefix, columns[column])
-            if tf:
-                weighted_tf += weight * tf * (K1 + 1) / (tf + (norm if column == "text" else K1))
-        if weighted_tf:
-            total += idfs.get(term, 1.0) * weighted_tf
-    return total
-
-
-def rank_candidates(candidates: list[Candidate], terms: list[tuple[str, bool]], idfs: dict[str, float], avg_text_len: float) -> list[tuple[Candidate, float]]:
-    scored = [(c, -score(c, terms, idfs, avg_text_len)) for c in candidates]
-    scored.sort(key=lambda pair: (pair[1], -pair[0].captured_at))
-    return scored
+def rank_candidates(candidates: list[Candidate], terms: list[tuple[str, bool]], idfs: dict[str, float]) -> list[tuple[Candidate, float]]:
+    """`(candidate, rank)` best first; rank is the negative BM25 score. Equal scores: the newer frame first."""
+    rows = [{"window_title": c.window_title, "app": c.app, "text": c.text, "candidate": c}
+            for c in sorted(candidates, key=lambda c: -c.captured_at)]
+    scored = textsearch.bm25_rescore(rows, terms, weights=WEIGHTS, idfs=idfs, idf_floor=IDF_FLOOR)
+    return [(row["candidate"], -score) for row, score in scored]
 
 
 def normalise_snippet(snippet: str) -> str:
-    return " ".join(tokens(snippet.replace("[", "").replace("]", "")))
+    return " ".join(textsearch.tokens(snippet.replace("[", "").replace("]", "")))
 
 
 def group_moments(ranked: list[tuple[Candidate, float]], window_s: int = GROUP_WINDOW_S) -> list[dict]:

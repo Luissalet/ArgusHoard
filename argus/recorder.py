@@ -10,7 +10,8 @@ from dataclasses import dataclass, field
 from .capture import Backends
 from .capture.base import primary_index
 from .exclusions import first_match
-from .images import dhash, is_near_duplicate, signature
+from .hoard_link.docs.imaging import dhash
+from .images import is_near_duplicate, signature
 from .settings import SettingsStore
 from .store import ExclusionStore, FrameStore
 from .worker import OcrWorker
