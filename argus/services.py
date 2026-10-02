@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import secrets
 import shutil
 import time
 
@@ -11,6 +10,7 @@ from . import __version__
 from .capture import select_backends
 from .config import Config
 from .db import Database
+from .hoard_link.tokens import read_or_create_token
 from .janitor import Janitor
 from .ocr import ocr_availability
 from .queries import Queries
@@ -23,24 +23,13 @@ from .worker import OcrWorker
 log = logging.getLogger("argus")
 
 
-def write_token(config: Config) -> str:
-    config.data_dir.mkdir(parents=True, exist_ok=True)
-    token = secrets.token_hex(32)
-    config.token_path.write_text(token, encoding="utf-8")
-    try:
-        config.token_path.chmod(0o600)
-    except OSError:
-        pass
-    return token
-
-
 class Services:
     def __init__(self, config: Config):
         self.config = config
         self.started_at = time.time()
         config.data_dir.mkdir(parents=True, exist_ok=True)
         config.frames_dir.mkdir(parents=True, exist_ok=True)
-        self.token = write_token(config)
+        self.token = read_or_create_token(config.token_path)  # stable across restarts: a second instance must not rotate it
         self.db = Database(config.db_path)
         self.settings = SettingsStore(self.db)
         self.frames = FrameStore(self.db, config.frames_dir)

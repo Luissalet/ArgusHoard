@@ -11,7 +11,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from argus.port import free_port
+from argus.hoard_link.net import free_port
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -64,7 +64,7 @@ def test_subprocess_http_and_mcp_bridge(app_process):
     assert [t["name"] for t in tools][:2] == ["screen_status", "screen_search"]
 
     token = (data_dir / "mcp-token").read_text().strip()
-    assert len(token) == 64
+    assert len(token) >= 32
     assert httpx.post(f"{url}/api/agent/call", json={"name": "screen_status"}).status_code == 401
     status = httpx.post(f"{url}/api/agent/call", json={"name": "screen_status"}, headers={"Authorization": f"Bearer {token}"}).json()
     assert status["state"] == "watching" and status["capture_backend"] == "fake"

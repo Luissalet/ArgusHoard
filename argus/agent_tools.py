@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 from pydantic import BaseModel, Field
 
+from .hoard_link.agentkit import AppError, Empty, Tool, ann, call_tool as run_tool, tool_catalog as catalog_of
 from .services import Services
 from .timeparse import resolve_range, to_epoch
 
@@ -20,10 +20,6 @@ If a tool reports state paused, private or disabled, tell the user plainly that 
 Only call screen_pause, screen_resume or screen_delete_range when the user explicitly asks for that action; deleting is permanent."""
 
 TIME_HELP = "ISO datetime or a phrase such as 'hoy', 'ayer', 'hace 2 horas', 'esta mañana', 'today', '2 hours ago'."
-
-
-class Empty(BaseModel):
-    pass
 
 
 class SearchArgs(BaseModel):
@@ -74,15 +70,6 @@ class DeleteRangeArgs(BaseModel):
     to: str = Field(..., description=f"End bound (required). {TIME_HELP}")
 
     model_config = {"populate_by_name": True}
-
-
-@dataclass(frozen=True)
-class Tool:
-    name: str
-    description: str
-    input_model: type[BaseModel]
-    annotations: dict[str, bool]
-    run: Callable[[Services, Any], Any]
 
 
 def _range(args) -> tuple[float | None, float | None, dict]:
@@ -233,37 +220,33 @@ def run_delete_range(services: Services, args: DeleteRangeArgs) -> dict:
     return {"ok": True, "deleted": deleted, "resolved": resolved}
 
 
-def _ann(read_only: bool, destructive: bool = False, idempotent: bool | None = None) -> dict[str, bool]:
-    return {"readOnlyHint": read_only, "destructiveHint": destructive, "idempotentHint": read_only if idempotent is None else idempotent, "openWorldHint": False}
-
-
 TOOLS: list[Tool] = [
-    Tool("screen_status", "Is Argus recording? State, OCR queue, last capture, disk and retention. Keywords: estado, grabando, pausado.\nWhether Argus is recording (watching, paused, private or disabled), OCR queue depth, last capture, disk usage and retention.\nSinónimos: estado, pantalla, está grabando, pausa, modo privado, espacio en disco.", Empty, _ann(True), run_status),
-    Tool("screen_search", "Search everything that was on screen (OCR, titles, apps). Keywords: buscar en pantalla, qué vi, dónde leí.\nFull-text search over everything that was on screen (OCR text, window titles, app names), BM25-ranked (window title weighs most). Each hit is a *moment*: consecutive near-identical frames of one window collapsed together (first_at, last_at, count, frame_ids with the best frame first; `id` is that frame). `limit` counts moments. Best first step for 'that error I saw' or 'where did I read X'.\nSinónimos: buscar, pantalla, error que vi, texto que vi, dónde leí, recuperar texto, ventana, aplicación, ayer, hace un rato.", SearchArgs, _ann(True), run_search),
-    Tool("screen_timeline", "What was on screen during a period, newest first. Keywords: cronología, qué había en pantalla, secuencia.\nBrowse what was on screen during a period, newest first: consecutive frames of one app + window are folded into segments (from, until, duration, frames, excerpt), so a whole afternoon fits in one answer; group=false lists every frame; next_cursor pages further back. Use after screen_search/screen_recent when the user wants the sequence of events.\nSinónimos: línea de tiempo, qué estaba haciendo, cronología, historial de pantalla, ayer, esta mañana, hace 2 horas, aplicación, ventana.", TimelineArgs, _ann(True), run_timeline),
-    Tool("screen_frame_text", "Full OCR text of one frame (optionally its blocks with bounding boxes). Use ids returned by the other tools.\nSinónimos: texto completo, recuperar texto, captura, pantalla, leer la ventana.", FrameArgs, _ann(True), run_frame_text),
-    Tool("screen_pin_frame", "Pin or unpin a capture by id so automatic cleanup preserves it.\nAn explicit delete-range still removes pinned captures. Use only when the user asks to keep or unpin one.\nSinónimos: fijar captura, guardar pantalla, conservar captura, desfijar.", PinArgs, _ann(False, False, True), run_pin_frame),
-    Tool("screen_recent", "What the user was just looking at (last N minutes of OCR). Keywords: qué estaba haciendo, hace un rato, ahora.\nWhat the user was just looking at: OCR text of the last frames in the past N minutes, deduplicated, most recent first. Use for 'what was I doing', 'what did I just read', 'hace un rato'.\nSinónimos: qué estaba haciendo, hace un rato, ahora mismo, lo último que vi, pantalla actual, ventana, recuperar texto.", RecentArgs, _ann(True), run_recent),
-    Tool("screen_activity", "Time spent per app and window in a period, with a summary. Keywords: actividad, cuánto tiempo, en qué apps.\nTime spent per app in a period, with the top window titles per app, the longest sessions (consecutive frames of one app + window) and a one-line human summary. Durations come from how long each frame stayed on screen.\nSinónimos: actividad, en qué he perdido el tiempo, cuánto tiempo, aplicación, ventana, hoy, ayer, esta semana, resumen del día.", RangeArgs, _ann(True), run_activity),
-    Tool("screen_days", "Days that have screen data, with frames, hidden ticks (excluded apps) and seconds on screen per day.\nSinónimos: días, qué días hay, historial, calendario, pantalla.", Empty, _ann(True), run_days),
-    Tool("screen_pause", "Pause screen recording until resumed (only when asked). Keywords: pausar, deja de grabar, privado.\nPause recording until screen_resume is called (or the user resumes from the app). Only when the user asks for it.\nSinónimos: pausa, parar, deja de grabar, deja de mirar, pantalla.", Empty, _ann(False, False, True), run_pause),
-    Tool("screen_resume", "Resume recording (also leaves private mode). Only when the user asks for it.\nSinónimos: reanudar, continuar, vuelve a grabar, vuelve a mirar, pantalla.", Empty, _ann(False, False, True), run_resume),
-    Tool("screen_delete_range", "Permanently delete frames between two times (only when asked; no undo). Keywords: borrar, eliminar capturas.\nPermanently delete every frame (images and text) between two times. Only when the user explicitly asks; there is no undo.\nSinónimos: borrar, eliminar, olvidar, borra lo de ayer, borra esta tarde, privacidad, pantalla.", DeleteRangeArgs, _ann(False, True, True), run_delete_range),
+    Tool("screen_status", "Is Argus recording? State, OCR queue, last capture, disk and retention. Keywords: estado, grabando, pausado.\nWhether Argus is recording (watching, paused, private or disabled), OCR queue depth, last capture, disk usage and retention.\nSinónimos: estado, pantalla, está grabando, pausa, modo privado, espacio en disco.", Empty, ann(True), run_status),
+    Tool("screen_search", "Search everything that was on screen (OCR, titles, apps). Keywords: buscar en pantalla, qué vi, dónde leí.\nFull-text search over everything that was on screen (OCR text, window titles, app names), BM25-ranked (window title weighs most). Each hit is a *moment*: consecutive near-identical frames of one window collapsed together (first_at, last_at, count, frame_ids with the best frame first; `id` is that frame). `limit` counts moments. Best first step for 'that error I saw' or 'where did I read X'.\nSinónimos: buscar, pantalla, error que vi, texto que vi, dónde leí, recuperar texto, ventana, aplicación, ayer, hace un rato.", SearchArgs, ann(True), run_search),
+    Tool("screen_timeline", "What was on screen during a period, newest first. Keywords: cronología, qué había en pantalla, secuencia.\nBrowse what was on screen during a period, newest first: consecutive frames of one app + window are folded into segments (from, until, duration, frames, excerpt), so a whole afternoon fits in one answer; group=false lists every frame; next_cursor pages further back. Use after screen_search/screen_recent when the user wants the sequence of events.\nSinónimos: línea de tiempo, qué estaba haciendo, cronología, historial de pantalla, ayer, esta mañana, hace 2 horas, aplicación, ventana.", TimelineArgs, ann(True), run_timeline),
+    Tool("screen_frame_text", "Full OCR text of one frame (optionally its blocks with bounding boxes). Use ids returned by the other tools.\nSinónimos: texto completo, recuperar texto, captura, pantalla, leer la ventana.", FrameArgs, ann(True), run_frame_text),
+    Tool("screen_pin_frame", "Pin or unpin a capture by id so automatic cleanup preserves it.\nAn explicit delete-range still removes pinned captures. Use only when the user asks to keep or unpin one.\nSinónimos: fijar captura, guardar pantalla, conservar captura, desfijar.", PinArgs, ann(False, False, True), run_pin_frame),
+    Tool("screen_recent", "What the user was just looking at (last N minutes of OCR). Keywords: qué estaba haciendo, hace un rato, ahora.\nWhat the user was just looking at: OCR text of the last frames in the past N minutes, deduplicated, most recent first. Use for 'what was I doing', 'what did I just read', 'hace un rato'.\nSinónimos: qué estaba haciendo, hace un rato, ahora mismo, lo último que vi, pantalla actual, ventana, recuperar texto.", RecentArgs, ann(True), run_recent),
+    Tool("screen_activity", "Time spent per app and window in a period, with a summary. Keywords: actividad, cuánto tiempo, en qué apps.\nTime spent per app in a period, with the top window titles per app, the longest sessions (consecutive frames of one app + window) and a one-line human summary. Durations come from how long each frame stayed on screen.\nSinónimos: actividad, en qué he perdido el tiempo, cuánto tiempo, aplicación, ventana, hoy, ayer, esta semana, resumen del día.", RangeArgs, ann(True), run_activity),
+    Tool("screen_days", "Days that have screen data, with frames, hidden ticks (excluded apps) and seconds on screen per day.\nSinónimos: días, qué días hay, historial, calendario, pantalla.", Empty, ann(True), run_days),
+    Tool("screen_pause", "Pause screen recording until resumed (only when asked). Keywords: pausar, deja de grabar, privado.\nPause recording until screen_resume is called (or the user resumes from the app). Only when the user asks for it.\nSinónimos: pausa, parar, deja de grabar, deja de mirar, pantalla.", Empty, ann(False, False, True), run_pause),
+    Tool("screen_resume", "Resume recording (also leaves private mode). Only when the user asks for it.\nSinónimos: reanudar, continuar, vuelve a grabar, vuelve a mirar, pantalla.", Empty, ann(False, False, True), run_resume),
+    Tool("screen_delete_range", "Permanently delete frames between two times (only when asked; no undo). Keywords: borrar, eliminar capturas.\nPermanently delete every frame (images and text) between two times. Only when the user explicitly asks; there is no undo.\nSinónimos: borrar, eliminar, olvidar, borra lo de ayer, borra esta tarde, privacidad, pantalla.", DeleteRangeArgs, ann(False, True, True), run_delete_range),
 ]
 
 TOOLS_BY_NAME = {tool.name: tool for tool in TOOLS}
 
 
 def tool_catalog() -> list[dict]:
-    return [
-        {"name": t.name, "description": t.description, "annotations": t.annotations, "inputSchema": t.input_model.model_json_schema(by_alias=True)}
-        for t in TOOLS
-    ]
+    return catalog_of(TOOLS)
 
 
-def call_tool(services: Services, name: str, arguments: dict | None) -> Any:
-    tool = TOOLS_BY_NAME.get(name)
-    if tool is None:
-        raise KeyError(f"Unknown tool: {name}")
-    args = tool.input_model.model_validate(arguments or {})
-    return tool.run(services, args)
+def call_tool(services: Services, name: str, arguments: dict | None, *, cap: bool = True) -> Any:
+    """Run one tool through the shared agent kit (argument validation, result cap). An expected "not found"
+    (`LookupError`) keeps the 404 it always had; a bare `ValueError` is a 400 `invalid`."""
+    try:
+        return run_tool(TOOLS_BY_NAME, services, name, arguments, cap=cap)
+    except LookupError as error:
+        if isinstance(error, KeyError):  # an unknown tool: the router answers 404 unknown_tool itself
+            raise
+        raise AppError("not_found", str(error), status=404) from error
