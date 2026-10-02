@@ -67,6 +67,10 @@ portapapeles ni tráfico de red.
   `requirements-windows.txt`) cuando está disponible y `rapidocr` (ONNX en
   CPU, multiplataforma) si no; `tesseract` se usa si `pytesseract` y el
   binario están instalados. Cualquiera de los tres se puede forzar en Ajustes.
+  Si no hay ninguno instalado, el último recurso es el OCR de Kafka a través del
+  hub de Hoard Link (`family`, también seleccionable con `PUT /api/settings`);
+  las pantallas solo viajan a ese servicio local, como un PNG temporal que se
+  borra enseguida.
 
 ## Instalación y arranque (Windows)
 
@@ -90,9 +94,13 @@ de captura).
 
 ### Acceso desde el móvil (a través de un túnel)
 
-El servidor escucha en 127.0.0.1 y solo responde a peticiones cuyo `Host` sea `localhost`, `127.0.0.1` o `[::1]`. Para entrar desde el móvil a través de un túnel que ponga la aplicación delante (una red privada, un proxy inverso), indicad los nombres de host adicionales en `ARGUS_ALLOWED_HOSTS`, separados por comas, exactos o `*.sufijo`: `ARGUS_ALLOWED_HOSTS=mi-pc.example,*.ts.net`. El puerto y las mayúsculas no importan, y el `Origin` de las llamadas a la API también tiene que corresponder a uno de esos hosts (con cualquier esquema o puerto). Las peticiones *fetch* desde otras webs se siguen rechazando; abrir la aplicación desde otra página (un enlace, un bookmarklet, el menú de compartir) es una navegación normal y funciona.
+El servidor escucha en 127.0.0.1 y solo responde a peticiones cuyo `Host` sea `localhost`, `127.0.0.1` o `[::1]`. Para entrar desde el móvil a través de un túnel que ponga la aplicación delante (una red privada, un proxy inverso), indicad los nombres de host adicionales en `ARGUS_ALLOWED_HOSTS`, separados por comas, exactos o `*.sufijo`: `ARGUS_ALLOWED_HOSTS=mi-pc.example,*.ts.net`. Las mayúsculas no importan y una entrada sin puerto vale para cualquiera (escribid `mi-pc.example:8443` para fijar uno); el `Origin` de las llamadas a la API también tiene que corresponder a uno de esos hosts (con cualquier esquema o puerto). Las peticiones *fetch* desde otras webs se siguen rechazando; abrir la aplicación desde otra página (un enlace, un bookmarklet, el menú de compartir) es una navegación normal y funciona.
 
 Una vez abierta a través del túnel, el navegador ofrece instalarla (PWA).
+
+### Piezas comunes
+
+La parte de servidor viene de la biblioteca compartida Hoard Link, copiada en `argus/hoard_link/` (no se edita aquí): guarda de host y origen, manejo de errores, `/api/health`, manifiesto PWA con service worker y SPA, archivos de puerto y de token (el token tiene al menos 32 caracteres), lectura de configuración, el envoltorio de SQLite, el enrutador del catálogo de herramientas y el puente MCP. La búsqueda usa sus reglas de palabras y BM25 (`hoard_link.docs.textsearch`: acentos plegados, palabras de relleno fuera de las consultas de varias palabras, las cortas exactas y las largas como prefijo) y el detector de cambios su hash perceptual (`hoard_link.docs.imaging`). `ARGUS_LOG` ya no se lee: el servidor registra a nivel INFO en la consola y en `data/logs/argus-hoard.log` (rotativo).
 
 Desarrollo: `python scripts/dev.py` lanza uvicorn con `--reload` y el servidor
 de Vite (que redirige `/api`).

@@ -61,7 +61,10 @@ clipboard and network traffic are never touched.
   (Windows.Media.Ocr, about 150 ms per 1080p frame, needs
   `requirements-windows.txt`) when it is available and `rapidocr` (ONNX on
   CPU, cross-platform) otherwise; `tesseract` is used if `pytesseract` and the
-  binary are installed. Any of the three can be forced in Ajustes.
+  binary are installed. Any of the three can be forced in Ajustes. When none of
+  them is installed, Kafka's OCR through the Hoard Link hub is the last resort
+  (`family`, also selectable through `PUT /api/settings`); frames travel only to
+  that local service, as a temporary PNG removed right after.
 
 ## Install and run (Windows)
 
@@ -84,9 +87,13 @@ Other env vars: `ARGUS_CAPTURE=auto|mss|fake|none`, `ARGUS_WINDOW=auto|windows|f
 
 ### Access from your phone (behind a tunnel)
 
-The server binds 127.0.0.1 and only answers requests whose `Host` is `localhost`, `127.0.0.1` or `[::1]`. To reach it from your phone through a tunnel that fronts the app (a private mesh network, a reverse proxy), list the extra host names in `ARGUS_ALLOWED_HOSTS`, comma-separated, exact names or `*.suffix`: `ARGUS_ALLOWED_HOSTS=my-pc.example,*.ts.net`. Port and letter case are ignored, and the `Origin` of API calls must resolve to one of those hosts too (any scheme or port). Cross-site *fetches* are still refused; opening the app from another page (a link, a bookmarklet, the share sheet) is a normal navigation and works.
+The server binds 127.0.0.1 and only answers requests whose `Host` is `localhost`, `127.0.0.1` or `[::1]`. To reach it from your phone through a tunnel that fronts the app (a private mesh network, a reverse proxy), list the extra host names in `ARGUS_ALLOWED_HOSTS`, comma-separated, exact names or `*.suffix`: `ARGUS_ALLOWED_HOSTS=my-pc.example,*.ts.net`. Letter case is ignored and an entry without a port matches any port (write `my-pc.example:8443` to pin one); the `Origin` of API calls must resolve to one of those hosts too (any scheme or port). Cross-site *fetches* are still refused; opening the app from another page (a link, a bookmarklet, the share sheet) is a normal navigation and works.
 
 Once opened through the tunnel, the browser offers to install it (PWA).
+
+### Shared plumbing
+
+The server plumbing comes from the shared Hoard Link library vendored in `argus/hoard_link/` (never edited here): host/origin guard, error handlers, `/api/health`, PWA manifest + service worker + SPA fallback, port and token files (the token is at least 32 characters), config readers, the SQLite wrapper, the agent catalogue router and the MCP bridge. Search uses its word rules and BM25 (`hoard_link.docs.textsearch`: accents folded, filler words dropped from multi-word queries, short words exact, longer ones as prefixes) and the change detector its perceptual hash (`hoard_link.docs.imaging`). `ARGUS_LOG` is no longer read: the server logs at INFO to the console and to `data/logs/argus-hoard.log` (rotating).
 
 Development: `python scripts/dev.py` runs uvicorn `--reload` plus the Vite dev
 server (proxying `/api`).
