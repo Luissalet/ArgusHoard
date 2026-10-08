@@ -87,7 +87,7 @@ def test_family_ocr_failure_gives_an_empty_result(monkeypatch):
     assert result.text == "" and result.blocks == [] and result.backend == "family"
 
 
-def test_select_ocr_uses_the_family_service_only_when_no_local_engine_runs(monkeypatch):
+def test_select_ocr_can_use_the_family_service_when_local_engines_are_absent(monkeypatch):
     from argus.ocr import rapid, tesseract, winocr_backend
     from argus.ocr.family import FamilyOcr
 
@@ -95,7 +95,51 @@ def test_select_ocr_uses_the_family_service_only_when_no_local_engine_runs(monke
         monkeypatch.setattr(cls, "available", classmethod(lambda c: (False, "off")))
     monkeypatch.setattr(FamilyOcr, "available", classmethod(lambda c: (True, "ok")))
     engine, notes = select_ocr("auto")
-    assert engine.name == "family" and len(notes) == 3
+    assert engine.name == "family" and len(notes) == 1
     monkeypatch.setattr(FamilyOcr, "available", classmethod(lambda c: (False, "hub down")))
     engine, notes = select_ocr("auto")
     assert engine.name == "none" and any("family" in n for n in notes)
+
+
+def test_auto_shares_kafka_before_loading_another_ocr_model(monkeypatch):
+    from argus.ocr import rapid, winocr_backend
+    from argus.ocr.family import FamilyOcr
+    monkeypatch.setattr(winocr_backend.WinOcr, "available", classmethod(lambda c: (False, "off")))
+    monkeypatch.setattr(FamilyOcr, "available", classmethod(lambda c: (True, "ok")))
+    monkeypatch.setattr(rapid.RapidOcr, "available", classmethod(lambda c: pytest.fail("do not load another OCR model")))
+    engine, notes = select_ocr("auto")
+    assert engine.name == "family"
+
+
+def test_fast_windows_ocr_still_wins_over_network_roundtrip(monkeypatch):
+    from argus.ocr import winocr_backend
+    from argus.ocr.family import FamilyOcr
+    monkeypatch.setattr(winocr_backend.WinOcr, "available", classmethod(lambda c: (True, "ok")))
+    monkeypatch.setattr(winocr_backend.WinOcr, "__init__", lambda self, lang: None)
+    monkeypatch.setattr(FamilyOcr, "available", classmethod(lambda c: pytest.fail("Windows does not need a model load")))
+    assert select_ocr("auto")[0].name == "winocr"
+
+
+def test_auto_family_ocr_falls_back_on_service_outage_but_never_on_auth_failure(monkeypatch):
+    from PIL import Image
+    from argus.ocr.family import FamilyOcr
+    from argus.ocr.base import OcrResult
+    selected = []
+    class Local:
+        def recognise(self, image):
+            return OcrResult(text="local evidence", backend="fixture")
+    def choose(*a, **kw):
+        selected.append(kw)
+        assert kw["exclude"] == ("family",)
+        return Local(), []
+    monkeypatch.setattr("argus.ocr.select_ocr", choose)
+    monkeypatch.setattr("argus.ocr.family.fam_docs.ocr_image", lambda *a, **kw: {"ok": False, "kind": "hub_down"})
+    engine = FamilyOcr()
+    engine.allow_local_fallback = True
+    image = Image.new("RGB", (20, 20), "white")
+    assert engine.recognise(image).text == "local evidence"
+    assert engine.recognise(image).backend == "fixture" and len(selected) == 1
+    monkeypatch.setattr("argus.ocr.family.fam_docs.ocr_image", lambda *a, **kw: {"ok": False, "kind": "auth"})
+    assert engine.recognise(image).text == "" and len(selected) == 1
+    monkeypatch.setattr("argus.ocr.family.fam_docs.ocr_image", lambda *a, **kw: {"ok": True, "text": "shared evidence"})
+    assert engine.recognise(image).text == "shared evidence" and engine._fallback is None

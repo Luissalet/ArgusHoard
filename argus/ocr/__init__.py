@@ -1,4 +1,4 @@
-"""OCR backend selection with automatic fallback: the local engines first, Kafka's through the hub as the last resort."""
+"""OCR selection: fast Windows OCR, then shared Kafka, then local fallbacks."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from .base import NullOcr, OcrBackend, OcrResult, join_blocks
 
 __all__ = ["OcrBackend", "OcrResult", "NullOcr", "join_blocks", "select_ocr", "ocr_availability"]
 
-ORDER = ["winocr", "rapidocr", "tesseract", "family"]
+ORDER = ["winocr", "family", "rapidocr", "tesseract"]
 
 
 def _classes() -> dict[str, type[OcrBackend]]:
@@ -27,12 +27,14 @@ def ocr_availability() -> dict[str, dict]:
     return out
 
 
-def select_ocr(requested: str = "auto", language: str = "es") -> tuple[OcrBackend, list[str]]:
+def select_ocr(requested: str = "auto", language: str = "es", *, exclude: tuple[str, ...] = ()) -> tuple[OcrBackend, list[str]]:
     """Instantiate the requested engine or the first available one; returns (engine, notes)."""
     classes = _classes()
     notes: list[str] = []
     candidates = ORDER if requested == "auto" else [requested, *[n for n in ORDER if n != requested]]
     for name in candidates:
+        if name in exclude:
+            continue
         cls = classes.get(name)
         if cls is None:
             continue
@@ -42,6 +44,8 @@ def select_ocr(requested: str = "auto", language: str = "es") -> tuple[OcrBacken
             continue
         try:
             engine = cls(language) if name in ("winocr", "tesseract", "family") else cls()
+            if name == "family" and requested == "auto":
+                engine.allow_local_fallback = True
         except Exception as error:  # broken install
             notes.append(f"{name}: failed to start ({error})")
             continue

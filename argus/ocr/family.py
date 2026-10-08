@@ -1,6 +1,6 @@
-"""Kafka's OCR engine through the family hub: the last resort when no engine is installed in this app.
+"""Kafka's OCR engine through the family hub: shared before loading another OCR model.
 
-Only used when winocr, rapidocr and tesseract are all unavailable (or when `ocr_backend` is "family"). The frame is written
+Used after the fast Windows engine in auto mode (or when `ocr_backend` is "family"). The frame is written
 to a temporary PNG for the service (it takes paths), removed right after, and never leaves the machine.
 """
 
@@ -24,6 +24,8 @@ class FamilyOcr(OcrBackend):
 
     def __init__(self, language: str = "es"):
         self.lang = (language or "es").lower()[:2]
+        self.allow_local_fallback = False
+        self._fallback = None
 
     @classmethod
     def available(cls) -> tuple[bool, str]:
@@ -47,7 +49,13 @@ class FamilyOcr(OcrBackend):
                 pass
         if not got.get("ok"):
             log.debug("family OCR failed: %s", got.get("error") or got.get("kind"))
+            if self.allow_local_fallback and got.get("kind") in ("hub_down", "app_down", "app_missing", "tool_missing"):
+                if self._fallback is None:
+                    from . import select_ocr
+                    self._fallback, _ = select_ocr("auto", self.lang, exclude=("family",))
+                return self._fallback.recognise(image)
             return OcrResult(backend=self.name)
+        self._fallback = None  # recovered service: release the local fallback model
         blocks: list[Block] = []
         for item in got.get("blocks") or []:
             text = str(item.get("text") or "").strip()

@@ -59,12 +59,14 @@ clipboard and network traffic are never touched.
 - Python 3.11+ (3.13 works). Node 22 only to build the client.
 - CPU is enough. With `ocr_backend: auto` the engine is `winocr`
   (Windows.Media.Ocr, about 150 ms per 1080p frame, needs
-  `requirements-windows.txt`) when it is available and `rapidocr` (ONNX on
-  CPU, cross-platform) otherwise; `tesseract` is used if `pytesseract` and the
-  binary are installed. Any of the three can be forced in Ajustes. When none of
-  them is installed, Kafka's OCR through the Hoard Link hub is the last resort
-  (`family`, also selectable through `PUT /api/settings`); frames travel only to
-  that local service, as a temporary PNG removed right after.
+  `requirements-windows.txt`) when available. Otherwise it shares Kafka's OCR
+  through the Hoard Link hub before trying `rapidocr` (ONNX on CPU) and
+  `tesseract` locally. This avoids loading a second OCR model when Kafka is
+  available; Windows OCR keeps its fast local path. An explicit engine choice
+  still wins. `family` is also selectable through `PUT /api/settings`; frames
+  travel only to that local service, as a temporary PNG removed right after.
+  In auto mode, a service outage can use a cached local fallback and retry Kafka
+  on later frames. Authentication or tool errors do not silently switch engines.
 
 ## Install and run (Windows)
 

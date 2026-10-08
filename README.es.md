@@ -64,13 +64,16 @@ portapapeles ni tráfico de red.
   interfaz.
 - Basta con la CPU. Con `ocr_backend: auto` el motor es `winocr`
   (Windows.Media.Ocr, unos 150 ms por pantalla 1080p, necesita
-  `requirements-windows.txt`) cuando está disponible y `rapidocr` (ONNX en
-  CPU, multiplataforma) si no; `tesseract` se usa si `pytesseract` y el
-  binario están instalados. Cualquiera de los tres se puede forzar en Ajustes.
-  Si no hay ninguno instalado, el último recurso es el OCR de Kafka a través del
-  hub de Hoard Link (`family`, también seleccionable con `PUT /api/settings`);
+  `requirements-windows.txt`) cuando está disponible. Después comparte el OCR
+  de Kafka a través del hub de Hoard Link antes de probar `rapidocr` (ONNX en
+  CPU) y `tesseract` locales. Evita cargar otro modelo OCR cuando Kafka responde;
+  Windows conserva su lectura local rápida. Un motor elegido expresamente
+  sigue teniendo prioridad. `family` también se selecciona con `PUT /api/settings`;
   las pantallas solo viajan a ese servicio local, como un PNG temporal que se
   borra enseguida.
+  En automático, si el servicio deja de estar disponible puede usar una alternativa
+  local y volver a probar Kafka en las siguientes capturas. Un error de autorización
+  o de herramienta no cambia de motor silenciosamente.
 
 ## Instalación y arranque (Windows)
 
