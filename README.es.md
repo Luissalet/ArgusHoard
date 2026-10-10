@@ -93,7 +93,8 @@ libre). Los datos viven en `ARGUS_DATA_DIR` o `<repo>/data` (ignorado por git).
 
 Otras variables: `ARGUS_CAPTURE=auto|mss|fake|none`,
 `ARGUS_WINDOW=auto|windows|fake|none`, `ARGUS_AUTOSTART=0` (no arrancar el hilo
-de captura).
+de captura), `ARGUS_VISUAL=auto|fake|none`, `ARGUS_VISUAL_THREADS`,
+`ARGUS_VISUAL_DUTY` (ver Búsqueda visual).
 
 ### Acceso desde el móvil (a través de un túnel)
 
@@ -108,6 +109,78 @@ La parte de servidor viene de la biblioteca compartida Hoard Link, copiada en `a
 Desarrollo: `python scripts/dev.py` lanza uvicorn con `--reload` y el servidor
 de Vite (que redirige `/api`).
 
+## Búsqueda visual
+
+Además del texto OCR, Argus puede buscar las capturas por su aspecto
+(`gráfica azul`, `blue bar chart`, `código en fondo oscuro`) y encontrar las
+pantallas que se parecen a una que ya tenéis. Es opcional y local.
+
+- **Modelo**: CLIP ViT-B/32 multilingüe, 512 dimensiones. La torre de texto es la
+  exportación multilingüe de DistilBERT (ONNX int8, unos 135 MB) y la de imagen es
+  el modelo de visión ONNX con pesos fp16 (unos 176 MB). En total unos 314 MB de
+  descarga (unos 300 MiB en disco) en `data/models/clip-b32-multilingual/`. **No**
+  se descarga solo: pulsad *Descargar modelo* en Ajustes o llamad a
+  `POST /api/visual/download`. Si cambia el identificador del modelo, se vuelve a
+  descargar y a indexar.
+- **Sin dependencias nuevas**: usa `onnxruntime`, `numpy`, `Pillow` y `httpx`, que
+  Argus ya tiene. El tokenizador WordPiece y la capa de proyección están en
+  `argus/visual_model.py`.
+- **Solo CPU**. El motor fija `CUDA_VISIBLE_DEVICES=-1` antes de cargar
+  onnxruntime y pide el proveedor de CPU, con un hilo (`ARGUS_VISUAL_THREADS`).
+  Nunca toca una GPU.
+- **Solo las capturas que Argus guarda**, nunca la pantalla en directo. Un hilo en
+  segundo plano con la prioridad más baja del sistema toma las capturas más
+  recientes que faltan en lotes de 4, descansa tanto como trabajó
+  (`ARGUS_VISUAL_DUTY=0.5`) y cede mientras la cola de OCR tenga trabajo. Se puede
+  interrumpir y seguir (pregunta a la base de datos qué capturas no tienen vector
+  del modelo actual) y descarga el modelo de memoria tras 10 minutos sin uso
+  (unos 650 MB residentes en todo el proceso mientras está cargado). Una captura ilegible se salta, no se
+  reintenta en bucle.
+- **Almacenamiento**: tabla `frame_vectors` en la base de datos de Argus, 512
+  valores float16 (1 KB) por captura, con el identificador del modelo. Borrar una
+  captura (una a una, por tramo, por retención o por el límite de disco) borra su
+  vector en la misma transacción. Los vectores de un modelo anterior se sustituyen
+  y nunca se mezclan en una búsqueda.
+- **Búsqueda**: `mode=text|visual|both` (por defecto `both`). El modo visual
+  convierte la consulta con la torre de texto y puntúa cada vector por coseno (por
+  fuerza bruta sobre una matriz float16 en memoria). El modo `both` fusiona ese
+  orden con el del OCR por fusión de rangos recíprocos (k=60); un momento hallado
+  por las dos vías lleva `via: ["text","visual"]`, `visual_score` y un `score`
+  fusionado. Un umbral de relevancia deja fuera el ruido visual de la fusión
+  (absoluto 0,20, a menos de 0,05 del mejor y, desde 50 capturas indexadas, media
+  más 2 desviaciones típicas). Sin un índice utilizable, `both` responde solo con
+  texto y lo dice; `visual` responde 409.
+- **Buscar parecidas**: `GET /api/frames/{id}/similar`, el botón *Ver pantallas
+  parecidas* en Buscar y *Buscar parecidas* en el visor. Si la captura aún no está
+  indexada, la procesa en el momento, y deja fuera su propio momento.
+- **Ajuste**: `visual_search` (activado por defecto; solo hace algo si el modelo
+  está presente). `GET /api/visual` devuelve el estado: indexadas/total, modelo,
+  tamaño en disco, ms por captura y progreso de la descarga.
+- **Variables**: `ARGUS_VISUAL=auto|fake|none` (`fake` es un incrustador de
+  colores determinista para las pruebas), `ARGUS_VISUAL_THREADS`,
+  `ARGUS_VISUAL_DUTY`.
+
+Medido en este PC con el modelo real, un hilo de CPU y capturas de 1280x720: unos
+100 ms por captura al indexar (de 91 a 123 ms, igual en lotes de 4), 6 ms para
+convertir una consulta, de 8 a 13 ms en una búsqueda HTTP completa y cerca de 1 ms
+para puntuar 10 vectores. La fuerza bruta es lineal; un índice de
+100.000 capturas es un producto de matrices de 512 columnas, que debería quedar en
+decenas de milisegundos, sin medir aquí.
+
+Límites, sin adornos. Con diez capturas sintéticas (gráfica, tarta, factura,
+código, hoja de cálculo, terminal, etc.) y quince consultas en inglés y español,
+la pantalla correcta salió primera en 13 de 15. CLIP B/32 a 224 px ve la
+composición, el color y el tipo de documento, no el texto pequeño: un terminal
+oscuro y código oscuro se confunden con facilidad, y una hoja de cálculo descrita
+en español quedó tercera (en inglés, `spreadsheet grid`, primera). Las
+puntuaciones están comprimidas (0,22 a 0,24 para pantallas sin relación, 0,25 a
+0,30 para un acierto): fijaos en el orden, no en el número. Las palabras exactas
+que hay en pantalla siguen siendo cosa de la búsqueda OCR; por eso `both` es el
+modo por defecto. La imagen se ajusta con bandas (lado largo a 224 px, relleno
+gris), que ordenó mejor que deformarla o recortar el centro, y el modelo de
+visión con pesos fp16 ordena igual que el fichero fp32 de 335 MB, mientras que
+uno int8 reduce el tamaño a la mitad y ordena claramente peor.
+
 ## La interfaz
 
 - **Línea de tiempo**: selector de día; el día se agrupa en *sesiones* (una
@@ -115,12 +188,12 @@ de Vite (que redirige `/api`).
   número de pantallas, miniaturas); una sesión se despliega con sus capturas y un
   deslizador; una captura se abre en grande con el texto OCR superpuesto y
   seleccionable, anterior/siguiente (flechas del teclado).
-- **Buscar**: texto + rango de fechas + aplicación; una fila por momento (las
+- **Buscar**: texto + cómo buscar (texto y aspecto, solo texto, solo aspecto) + rango de fechas + aplicación, con *Ver pantallas parecidas* en cada momento; una fila por momento (las
   pantallas repetidas de una ventana se agrupan, con tira de miniaturas), horas
   como «hoy 17:32–17:41» / «ayer 09:10».
 - **Actividad**: tiempo por aplicación (barras), títulos de ventana más
   frecuentes, tabla por día.
-- **Ajustes**: modo privado, captura activada, intervalo, sensibilidad al
+- **Ajustes**: modo privado, búsqueda visual (interruptor, descarga del modelo, progreso del índice), captura activada, intervalo, sensibilidad al
   cambio, monitores, motor OCR (con la disponibilidad de cada uno), ancho de
   imagen, retención, límite de disco, exclusiones (añadir, quitar, activar y
   caja de prueba) y una tarjeta de estado (cola, disco, última captura,
@@ -144,7 +217,9 @@ Todas las rutas escuchan solo en `127.0.0.1` y rechazan otros hosts u orígenes.
 | `GET /api/sessions?day` (o `from&to`) `&app` | capturas consecutivas de una misma aplicación y ventana agrupadas en sesiones (inicio, fin, duración, número, miniaturas) |
 | `GET /api/frames/{id}` · `/image` · `/thumb` | texto completo + bloques + anterior/siguiente; ficheros WebP |
 | `PATCH /api/frames/{id}/pin` | fijar o desfijar con `{ "pinned": true/false }` |
-| `GET /api/search?q&from&to&app&limit` | candidatos FTS5 reordenados con BM25 (título 3 / aplicación 2 / texto 1, IDF suavizado para que `rank` sea siempre un negativo real), `snippet()` con marcas `[ ]`; las pantallas casi idénticas de una misma ventana en 10 minutos se agrupan en un *momento* (`first_at`, `last_at`, `count`, `frame_ids`, la mejor primero); `limit` cuenta momentos |
+| `GET /api/search?q&from&to&app&limit&mode` | candidatos FTS5 reordenados con BM25 (título 3 / aplicación 2 / texto 1, IDF suavizado para que `rank` sea siempre un negativo real), `snippet()` con marcas `[ ]`; las pantallas casi idénticas de una misma ventana en 10 minutos se agrupan en un *momento* (`first_at`, `last_at`, `count`, `frame_ids`, la mejor primero); `limit` cuenta momentos; `mode=text\|visual\|both` (por defecto `both`) añade el orden visual fusionado por RRF (`via`, `visual_score`, `score`), `both` vuelve al texto si no hay índice utilizable y `visual` responde 409 |
+| `GET /api/frames/{id}/similar?limit&from&to&app&same_moment` | momentos que se parecen a esta captura (se procesa en el momento); 409 si la búsqueda visual no está disponible |
+| `GET /api/visual`, `POST /api/visual/download`, `POST /api/visual/reindex` | estado de la búsqueda visual (indexadas/total, modelo, tamaño, ms por captura, progreso de descarga), descarga explícita del modelo, vaciar y rehacer el índice |
 | `GET /api/apps?from&to` | tiempo por aplicación y títulos más frecuentes |
 | `GET /api/days` | días con datos (capturas, momentos ocultos, segundos) |
 | `DELETE /api/frames?from&to` | borrar un tramo (definitivo) |
@@ -164,7 +239,8 @@ marcha y reenvía cada llamada a `POST /api/agent/call` con el token de
 | Herramienta | Qué hace |
 | --- | --- |
 | `screen_status` | estado de la grabación, cola, última captura, disco, retención |
-| `screen_search` | búsqueda de texto completo con fragmentos; cada resultado es un momento (`first_at`, `last_at`, `count`, `frame_ids`) |
+| `screen_search` | búsqueda de texto completo con fragmentos, y `mode` text, visual o both para encontrar pantallas por su aspecto; cada resultado es un momento (`first_at`, `last_at`, `count`, `frame_ids`, `via`) |
+| `screen_similar` | momentos que se parecen a una captura dada |
 | `screen_timeline` | qué había en pantalla y cuándo, con duraciones |
 | `screen_frame_text` | texto OCR completo de una captura (bloques opcionales) |
 | `screen_pin_frame` | fijar o desfijar una captura para conservarla durante la limpieza automática |
@@ -190,6 +266,13 @@ duraciones de la línea de tiempo, retención y límite de disco, la API con
 `TestClient` y el backend falso, la autenticación del puente y una prueba de
 extremo a extremo que arranca `python -m argus` en un subproceso y lista las
 herramientas a través del puente MCP por stdio.
+
+`tests/test_visual.py` cubre la búsqueda visual con un incrustador falso
+determinista (fusión, indexado reanudable, borrado, cambio de modo, cambio de
+modelo, la descarga contra un servidor HTTP local, la API y las herramientas del
+agente). Una prueba usa el modelo real y está marcada `slow`: se omite si el
+modelo no está descargado; apuntad `ARGUS_TEST_MODEL_DATA` a un directorio de
+datos que lo tenga.
 
 ## Verificación en el ordenador real
 

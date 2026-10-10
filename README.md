@@ -85,7 +85,8 @@ venv\Scripts\python scripts\launch.py                 :: starts the app and open
 used). Data lives in `ARGUS_DATA_DIR` or `<repo>/data` (gitignored).
 
 Other env vars: `ARGUS_CAPTURE=auto|mss|fake|none`, `ARGUS_WINDOW=auto|windows|fake|none`,
-`ARGUS_AUTOSTART=0` (do not start the recorder thread).
+`ARGUS_AUTOSTART=0` (do not start the recorder thread), `ARGUS_VISUAL=auto|fake|none`,
+`ARGUS_VISUAL_THREADS`, `ARGUS_VISUAL_DUTY` (see Visual search).
 
 ### Access from your phone (behind a tunnel)
 
@@ -100,17 +101,80 @@ The server plumbing comes from the shared Hoard Link library vendored in `argus/
 Development: `python scripts/dev.py` runs uvicorn `--reload` plus the Vite dev
 server (proxying `/api`).
 
+## Visual search
+
+Besides the OCR text, Argus can search the screenshots by how they look
+(`blue bar chart`, `gráfica azul`, `code on a dark background`) and find the
+screens that look like one you already have. It is optional and local.
+
+- **Model**: CLIP ViT-B/32 multilingual, 512 dimensions. The text tower is the
+  multilingual DistilBERT export (int8 ONNX, about 135 MB) and the image tower is
+  the ONNX vision model with fp16 weights (about 176 MB). Together about 314 MB
+  to download (about 300 MiB on disk) into `data/models/clip-b32-multilingual/`.
+  It is **not** downloaded by itself: press *Descargar modelo* in Ajustes or call
+  `POST /api/visual/download`. A changed model id re-downloads and re-indexes.
+- **No new dependency**: it runs on the `onnxruntime`, `numpy`, `Pillow` and `httpx`
+  Argus already has. The WordPiece tokenizer and the projection head are
+  implemented in `argus/visual_model.py`.
+- **CPU only**. The engine sets `CUDA_VISIBLE_DEVICES=-1` before loading
+  onnxruntime and asks for the CPU provider, with one intra-op thread
+  (`ARGUS_VISUAL_THREADS`). It never touches a GPU.
+- **Only the frames Argus stores** are embedded, never the live screen. A
+  background thread at the lowest OS priority takes the newest missing frames in
+  batches of 4, sleeps as long as it worked (`ARGUS_VISUAL_DUTY=0.5`) and yields
+  while the OCR queue has work. It is resumable (it asks the database which frames
+  have no vector for the current model), and it unloads the model after 10 idle
+  minutes (about 650 MB resident for the whole process while loaded). A frame that cannot be read is
+  skipped, not retried in a loop.
+- **Storage**: table `frame_vectors` in the Argus database, 512 float16 values
+  (1 KB) per frame, with the model id. Deleting a frame (one by one, by range,
+  by retention or by the storage cap) deletes its vector in the same
+  transaction. Vectors of an older model are replaced and never mixed in a search.
+- **Search**: `mode=text|visual|both` (default `both`). Visual mode embeds the
+  query with the text tower and scores every vector by cosine (brute force over
+  an in-memory float16 matrix). Both mode fuses that ranking with the OCR ranking
+  by reciprocal rank fusion (k=60); a moment found both ways carries
+  `via: ["text","visual"]`, `visual_score` and a fused `score`. A relevance floor
+  keeps visual noise out of the fusion (absolute 0.20, within 0.05 of the best
+  and, from 50 indexed frames, mean + 2 standard deviations). Without a usable
+  index `both` answers with text only and says why; `visual` answers 409.
+- **Find similar**: `GET /api/frames/{id}/similar`, the *Ver pantallas parecidas*
+  button in Buscar and *Buscar parecidas* in the frame viewer. It embeds the
+  frame on demand if it is not indexed yet and leaves out the frame's own moment.
+- **Setting**: `visual_search` (default on; it only does something when the model
+  is present). `GET /api/visual` returns the status: indexed/total, model, disk
+  size, ms per frame, download progress.
+- **Env vars**: `ARGUS_VISUAL=auto|fake|none` (`fake` is a deterministic colour
+  embedder for tests), `ARGUS_VISUAL_THREADS`, `ARGUS_VISUAL_DUTY`.
+
+Measured on this PC with the real model, one CPU thread, 1280x720 frames:
+about 100 ms per frame to index (91 to 123 ms, the same in batches of 4), 6 ms to
+embed a query, 8 to 13 ms for a whole HTTP search and about 1 ms to score 10 vectors. Brute force is linear; a 100,000-frame index is a
+512-wide matrix product, expected in the tens of milliseconds, not measured here.
+
+Honest limits. On ten synthetic screenshots (chart, pie, invoice, code, sheet,
+terminal and so on) and fifteen English and Spanish queries the right screen came
+first in 13 of 15. CLIP B/32 at 224 px sees layout, colour and the kind of
+document, not small text: a dark terminal and dark code are easily confused, and
+a spreadsheet described in Spanish ranked third (the English `spreadsheet grid`
+ranked first). Scores are compressed (about 0.22 to 0.24 for unrelated screens,
+0.25 to 0.30 for a match), so read the rank, not the number. Exact words on
+screen are still the job of the OCR search; that is why `both` is the default.
+The image is letterboxed (long side 224 px, grey padding), which ranked better
+than squashing or centre-cropping, and the fp16-weights vision model ranks as
+the 335 MB fp32 file while an int8 one halves the size and ranks clearly worse.
+
 ## The UI (Spanish)
 
 - **Línea de tiempo**: day picker, the day grouped into *sessions* (one app +
   window seen continuously: time range, duration, count, preview thumbnails);
   a session expands into its frames with a scrubber; a frame opens as a big
   image with the OCR blocks overlaid as selectable text, prev/next (arrow keys).
-- **Buscar**: query + date range + app; one row per moment (repeated frames of
+- **Buscar**: query + how to search (text and look, text only, look only) + date range + app, with *Ver pantallas parecidas* on every moment; one row per moment (repeated frames of
   a window collapsed, with a thumbnail strip), times as "hoy 17:32–17:41" /
   "ayer 09:10".
 - **Actividad**: time by app (bars), top window titles, per-day table.
-- **Ajustes**: private mode, enabled, interval, change sensitivity, monitors,
+- **Ajustes**: private mode, visual search (switch, model download, indexing progress), enabled, interval, change sensitivity, monitors,
   OCR engine (with availability of each), image width, retention, storage cap,
   exclusions (add/remove/toggle + test box) and a status card (queue, disk,
   last capture, backends, errors).
@@ -133,7 +197,9 @@ All routes are bound to `127.0.0.1` and refuse other hosts/origins.
 | `GET /api/sessions?day` (or `from&to`) `&app` | consecutive frames of one app + window grouped into sessions (start, end, duration, count, preview thumbs) |
 | `GET /api/frames/{id}` · `/image` · `/thumb` | full text + blocks + prev/next; WebP files |
 | `PATCH /api/frames/{id}/pin` | pin or unpin with `{ "pinned": true/false }` |
-| `GET /api/search?q&from&to&app&limit` | FTS5 candidates re-ranked with BM25 (title 3 / app 2 / text 1, smoothed IDF so `rank` is always a real negative), `snippet()` with `[ ]` markers; consecutive near-identical hits of one window within 10 min collapse into one *moment* (`first_at`, `last_at`, `count`, `frame_ids` best first); `limit` counts moments |
+| `GET /api/search?q&from&to&app&limit&mode` | FTS5 candidates re-ranked with BM25 (title 3 / app 2 / text 1, smoothed IDF so `rank` is always a real negative), `snippet()` with `[ ]` markers; consecutive near-identical hits of one window within 10 min collapse into one *moment* (`first_at`, `last_at`, `count`, `frame_ids` best first); `limit` counts moments; `mode=text\|visual\|both` (default `both`) adds the visual ranking fused by RRF (`via`, `visual_score`, `score`), `both` falls back to text without a usable index and `visual` answers 409 |
+| `GET /api/frames/{id}/similar?limit&from&to&app&same_moment` | moments that look like this frame (it is embedded on demand); 409 if visual search is unavailable |
+| `GET /api/visual`, `POST /api/visual/download`, `POST /api/visual/reindex` | visual search status (indexed/total, model, size, ms per frame, download progress), explicit model download, drop and rebuild the index |
 | `GET /api/apps?from&to` | time by app + top window titles |
 | `GET /api/days` | days with data (frames, hidden ticks, seconds) |
 | `DELETE /api/frames?from&to` | delete a range (permanent) |
@@ -154,7 +220,8 @@ proxies every call to `POST /api/agent/call` with the token from
 | Tool | What it does |
 | --- | --- |
 | `screen_status` | recording state, queue, last capture, disk, retention |
-| `screen_search` | full-text search with snippets; each hit is a moment (`first_at`, `last_at`, `count`, `frame_ids`) |
+| `screen_search` | full-text search with snippets, plus `mode` text, visual or both to find screens by how they look; each hit is a moment (`first_at`, `last_at`, `count`, `frame_ids`, `via`) |
+| `screen_similar` | moments that look like a given frame |
 | `screen_timeline` | what was on screen when, with durations |
 | `screen_frame_text` | full OCR text of a frame (optionally blocks) |
 | `screen_pin_frame` | pin or unpin a capture to preserve it through automatic cleanup |
@@ -179,6 +246,12 @@ rendered fixtures, storage/FTS/snippets, timeline durations, retention and
 storage cap, the API through `TestClient` with the fake backend, agent auth,
 and an end-to-end test that boots `python -m argus` in a subprocess and lists
 the tools through the MCP stdio bridge.
+
+`tests/test_visual.py` covers the visual search with a deterministic fake
+embedder (fusion, resumable indexing, deletion, mode switch, model change, the
+download over a local HTTP server, the API and the agent tools). One test uses
+the real model and is marked `slow`: it skips unless the model is downloaded;
+point `ARGUS_TEST_MODEL_DATA` at a data directory that has it.
 
 ## Verifying on the real machine
 

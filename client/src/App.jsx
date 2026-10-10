@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api.js";
 import { Banner, Toast } from "./components/ui.jsx";
 import FrameViewer from "./components/FrameViewer.jsx";
@@ -73,7 +73,25 @@ export default function App() {
     [refresh],
   );
   const openFrame = useCallback((id) => setViewer(id), []);
-  const value = useMemo(() => ({ status, refresh, notify, act, openFrame }), [status, refresh, notify, act, openFrame]);
+  // "Buscar parecidas" from the frame viewer: remember the frame, go to Buscar, which takes it and runs the visual similarity search.
+  const [pendingSimilar, setPendingSimilar] = useState(null);
+  const similarRef = useRef(null);
+  const findSimilar = useCallback((id) => {
+    similarRef.current = id;
+    setPendingSimilar(id);
+    setViewer(null);
+    window.location.hash = "#/buscar";
+  }, []);
+  const takeSimilar = useCallback(() => {
+    const id = similarRef.current;
+    similarRef.current = null;
+    setPendingSimilar(null);
+    return id;
+  }, []);
+  const value = useMemo(
+    () => ({ status, refresh, notify, act, openFrame, pendingSimilar, takeSimilar, findSimilar }),
+    [status, refresh, notify, act, openFrame, pendingSimilar, takeSimilar, findSimilar],
+  );
 
   const page = PAGES.find((p) => p.path === route) || PAGES[0];
   const Component = page.component;

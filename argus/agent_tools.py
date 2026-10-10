@@ -5,15 +5,19 @@ from __future__ import annotations
 import time
 from typing import Any
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from .hoard_link.agentkit import AppError, Empty, Tool, ann, call_tool as run_tool, tool_catalog as catalog_of
 from .services import Services
 from .timeparse import resolve_range, to_epoch
+from .visual import VisualUnavailable
 
 AGENT_INSTRUCTIONS = """Argus's Hoard is the user's own screen history: periodic screenshots of their PC, OCR'd and searchable, stored only on their machine.
 Quote OCR text as OCR text: it may contain recognition errors, and a window title is what the app reported, not a fact you verified.
 Never speculate beyond what the frames show; if a frame lacks text (ocr_status != done) say so instead of guessing.
+screen_search also finds screens by how they looked (mode visual or both, the default): describe the scene ("la gráfica azul", "código en fondo oscuro", "a blue bar chart"). A visual hit has via ["visual"] and a visual_score (cosine, about 0.2-0.35 for a real match); it exists only once the image index is built (screen_status, visual), otherwise the search is text only. screen_similar finds screens that look like a given frame.
 Prefer screen_recent (what was just on screen) and screen_search (find a word) before screen_timeline (browse a period). A screen_search hit is a moment (count frames between first_at and last_at); pass its id to screen_frame_text for the full text.
 Times accept ISO datetimes and phrases in Spanish or English: "hoy", "ayer", "hace 2 horas", "esta mañana", "today", "yesterday", "2 hours ago".
 If a tool reports state paused, private or disabled, tell the user plainly that Argus is not recording right now. idle_since/idle_s in screen_status mean the active screen has not changed since then (no new frames, nothing to OCR).
@@ -23,11 +27,22 @@ TIME_HELP = "ISO datetime or a phrase such as 'hoy', 'ayer', 'hace 2 horas', 'es
 
 
 class SearchArgs(BaseModel):
-    q: str = Field(..., min_length=1, max_length=300, description="Words to find in the OCR text (all must appear; last word matches as prefix).")
+    q: str = Field(..., min_length=1, max_length=300, description="Words to find in the OCR text (all must appear; last word matches as prefix). With mode visual or both it can also describe what the screen looked like, in Spanish or English.")
     from_: str | None = Field(None, alias="from", description=f"Start bound. {TIME_HELP}")
     to: str | None = Field(None, description=f"End bound. {TIME_HELP}")
     app: str | None = Field(None, max_length=200, description="Restrict to one process name, e.g. 'chrome' or 'code'.")
     limit: int = Field(20, ge=1, le=100)
+    mode: Literal["text", "visual", "both"] = Field("both", description="text = OCR, titles and apps only; visual = how the screen looked (image embeddings); both = fused by rank (text only while no visual index exists).")
+
+    model_config = {"populate_by_name": True}
+
+
+class SimilarArgs(BaseModel):
+    id: int = Field(..., ge=1, description="Frame id from screen_search, screen_timeline or screen_recent.")
+    limit: int = Field(10, ge=1, le=50, description="How many moments.")
+    from_: str | None = Field(None, alias="from", description=f"Start bound. {TIME_HELP}")
+    to: str | None = Field(None, description=f"End bound. {TIME_HELP}")
+    app: str | None = Field(None, max_length=200, description="Restrict to one process name.")
 
     model_config = {"populate_by_name": True}
 
@@ -97,19 +112,43 @@ def run_status(services: Services, _: Empty) -> dict:
     keep = ("state", "enabled", "paused", "private", "interval_s", "capture_scope", "monitors", "active_monitor", "idle_since",
             "idle_s", "queue_depth", "ocr_backend", "last_capture_at", "last_error", "frames_total", "today", "disk_usage_bytes",
             "storage_cap_mb", "retention_days", "capture_backend")
-    return {k: s[k] for k in keep}
+    visual = s["visual"]
+    return {**{k: s[k] for k in keep},
+            "visual": {k: visual[k] for k in ("enabled", "active", "available", "indexed", "total", "pending", "model")}}
 
 
 def run_search(services: Services, args: SearchArgs) -> dict:
     lo, hi, resolved = _range(args)
-    result = services.queries.search(args.q, lo, hi, args.app, args.limit)
+    try:
+        result = services.search(args.q, lo, hi, args.app, args.limit, args.mode)
+    except VisualUnavailable as error:
+        raise AppError("visual_unavailable", str(error), status=409) from error
     hits = [
         {"id": h["id"], "time": h["captured_at"], "first_at": h["first_at"], "last_at": h["last_at"], "count": h["count"],
-         "frame_ids": h["frame_ids"][:20], "duration_s": h["duration_s"], "app": h["app"], "window_title": h["window_title"], "snippet": h["snippet"]}
+         "frame_ids": h["frame_ids"][:20], "duration_s": h["duration_s"], "app": h["app"], "window_title": h["window_title"], "snippet": h["snippet"],
+         "via": h.get("via", ["text"]), "visual_score": h.get("visual_score")}
         for h in result["hits"]
     ]
-    return {**_state_note(services), "query": args.q, "resolved": resolved, "hits": hits, "count": len(hits),
-            "frames_matched": result.get("frames_total", 0), "moments_total": result.get("moments_total", len(hits))}
+    visual = result.get("visual") or {}
+    return {**_state_note(services), "query": args.q, "mode": result.get("mode", "text"), "resolved": resolved, "hits": hits, "count": len(hits),
+            "frames_matched": result.get("frames_total", 0), "moments_total": result.get("moments_total", len(hits)),
+            "visual": {"used": bool(visual.get("used")), "note": visual.get("reason")}}
+
+
+def run_similar(services: Services, args: SimilarArgs) -> dict:
+    lo, hi, resolved = _range(args)
+    try:
+        result = services.visual.similar(args.id, args.limit, lo, hi, args.app)
+    except VisualUnavailable as error:
+        raise AppError("visual_unavailable", str(error), status=409) from error
+    hits = [
+        {"id": h["id"], "time": h["captured_at"], "first_at": h["first_at"], "last_at": h["last_at"], "count": h["count"],
+         "frame_ids": h["frame_ids"][:20], "duration_s": h["duration_s"], "app": h["app"], "window_title": h["window_title"],
+         "snippet": h["snippet"], "visual_score": h["visual_score"]}
+        for h in result["hits"]
+    ]
+    return {**_state_note(services), "frame_id": args.id, "resolved": resolved, "hits": hits, "count": len(hits),
+            "moments_total": result["moments_total"]}
 
 
 def _segments(frames: list[dict], limit: int) -> tuple[list[dict], float | None]:
@@ -222,7 +261,8 @@ def run_delete_range(services: Services, args: DeleteRangeArgs) -> dict:
 
 TOOLS: list[Tool] = [
     Tool("screen_status", "Is Argus recording? State, OCR queue, last capture, disk and retention. Keywords: estado, grabando, pausado.\nWhether Argus is recording (watching, paused, private or disabled), OCR queue depth, last capture, disk usage and retention.\nSinónimos: estado, pantalla, está grabando, pausa, modo privado, espacio en disco.", Empty, ann(True), run_status),
-    Tool("screen_search", "Search everything that was on screen (OCR, titles, apps). Keywords: buscar en pantalla, qué vi, dónde leí.\nFull-text search over everything that was on screen (OCR text, window titles, app names), BM25-ranked (window title weighs most). Each hit is a *moment*: consecutive near-identical frames of one window collapsed together (first_at, last_at, count, frame_ids with the best frame first; `id` is that frame). `limit` counts moments. Best first step for 'that error I saw' or 'where did I read X'.\nSinónimos: buscar, pantalla, error que vi, texto que vi, dónde leí, recuperar texto, ventana, aplicación, ayer, hace un rato.", SearchArgs, ann(True), run_search),
+    Tool("screen_search", "Search the screen history by text or by how it looked. Keywords: buscar en pantalla, qué vi, gráfica azul.\nSearch everything that was on screen. Text side: OCR text, window titles and app names, BM25-ranked (window title weighs most). Visual side (`mode` visual or both, default both): image embeddings, so a description such as 'la gráfica azul', 'código en fondo oscuro' or 'a red pie chart' finds the screen; hits carry `via` and `visual_score`. Each hit is a *moment*: consecutive near-identical frames of one window collapsed together (first_at, last_at, count, frame_ids with the best frame first; `id` is that frame). `limit` counts moments. Best first step for 'that error I saw' or 'where did I read X'.\nSinónimos: buscar, pantalla, error que vi, texto que vi, dónde leí, recuperar texto, ventana, aplicación, ayer, hace un rato.", SearchArgs, ann(True), run_search),
+    Tool("screen_similar", "Screens that look like a given frame (visual similarity). Keywords: parecido, similar, captura.\nMoments whose screen looks like the frame `id` (image embeddings, CPU), best first, without the moment the frame belongs to. Needs the visual index; use it for 'cuándo vi algo parecido a esto'.\nSinónimos: parecido a esta pantalla, captura similar, otra vez así, ventana igual, gráfica parecida, buscar por imagen.", SimilarArgs, ann(True), run_similar),
     Tool("screen_timeline", "What was on screen during a period, newest first. Keywords: cronología, qué había en pantalla, secuencia.\nBrowse what was on screen during a period, newest first: consecutive frames of one app + window are folded into segments (from, until, duration, frames, excerpt), so a whole afternoon fits in one answer; group=false lists every frame; next_cursor pages further back. Use after screen_search/screen_recent when the user wants the sequence of events.\nSinónimos: línea de tiempo, qué estaba haciendo, cronología, historial de pantalla, ayer, esta mañana, hace 2 horas, aplicación, ventana.", TimelineArgs, ann(True), run_timeline),
     Tool("screen_frame_text", "Full OCR text of one frame (optionally its blocks with bounding boxes). Use ids returned by the other tools.\nSinónimos: texto completo, recuperar texto, captura, pantalla, leer la ventana.", FrameArgs, ann(True), run_frame_text),
     Tool("screen_pin_frame", "Pin or unpin a capture by id so automatic cleanup preserves it.\nAn explicit delete-range still removes pinned captures. Use only when the user asks to keep or unpin one.\nSinónimos: fijar captura, guardar pantalla, conservar captura, desfijar.", PinArgs, ann(False, False, True), run_pin_frame),

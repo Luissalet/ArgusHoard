@@ -65,6 +65,17 @@ MIGRATIONS: list[str] = [
     ALTER TABLE frames ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0;
     CREATE INDEX frames_pinned_captured ON frames(pinned, captured_at);
     """,
+    # 3: image embeddings for visual search (one float16 vector per stored frame; `model` says which embedder made it)
+    """
+    CREATE TABLE frame_vectors (
+      frame_id INTEGER PRIMARY KEY REFERENCES frames(id) ON DELETE CASCADE,
+      model TEXT NOT NULL,
+      dim INTEGER NOT NULL,
+      vec BLOB NOT NULL,
+      created_at REAL NOT NULL
+    );
+    CREATE INDEX frame_vectors_model ON frame_vectors(model);
+    """,
 ]
 
 

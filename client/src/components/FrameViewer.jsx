@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api } from "../api.js";
+import { useApp } from "../App.jsx";
 import { fmtDateTime, fmtDuration } from "../format.js";
 
 // Text layer over the image: every OCR block is a transparent, selectable span.
@@ -24,6 +25,7 @@ function OcrLayer({ frame, size, showBoxes }) {
 }
 
 export default function FrameViewer({ frameId, onClose, onNavigate }) {
+  const { status, findSimilar } = useApp();
   const dialogRef = useRef(null);
   const imageRef = useRef(null);
   const [frame, setFrame] = useState(null);
@@ -105,6 +107,7 @@ export default function FrameViewer({ frameId, onClose, onNavigate }) {
             )}
           </div>
           <div className="flex items-center gap-2">
+            <button type="button" className="btn btn-sm" disabled={!frame || !status?.visual?.active} onClick={() => findSimilar(frame.id)} title={status?.visual?.active ? "Busca otros momentos en los que la pantalla se veía parecida a esta" : "Requiere la búsqueda visual activa (Ajustes)"}>Buscar parecidas</button>
             <button type="button" className="btn btn-sm" disabled={!frame || savingPin} onClick={togglePin} aria-pressed={Boolean(frame?.pinned)} title="Las capturas fijadas se conservan durante la limpieza automática">{frame?.pinned ? "★ Fijada" : "☆ Fijar"}</button>
             <button type="button" className="btn btn-sm" disabled={!frame?.prev} onClick={() => onNavigate(frame.prev)} aria-label="Captura anterior">← Anterior</button>
             <button type="button" className="btn btn-sm" disabled={!frame?.next} onClick={() => onNavigate(frame.next)} aria-label="Captura siguiente">Siguiente →</button>

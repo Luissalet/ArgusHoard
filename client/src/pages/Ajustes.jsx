@@ -38,6 +38,48 @@ function NumberField({ value, onCommit, min, max, step = 1, suffix }) {
   );
 }
 
+// Visual search: the CPU image model that lets you find a screen by how it looked.
+function VisualSection({ settings, save, act }) {
+  const [v, setV] = useState(null);
+  const load = () => api.visualStatus().then(setV).catch(() => {});
+  useEffect(() => {
+    load();
+    const timer = setInterval(load, 2000);
+    return () => clearInterval(timer);
+  }, []);
+  if (!v) return null;
+  const dl = v.download || {};
+  const downloading = dl.state === "downloading";
+  const pct = dl.total ? Math.round((100 * dl.done) / dl.total) : 0;
+  const percent = v.total ? Math.round((100 * v.indexed) / v.total) : 0;
+  return (
+    <section className="panel-white mb-5" data-testid="visual-section">
+      <h2 className="text-[17px] font-semibold">Búsqueda visual</h2>
+      <p className="help">Encuentra una pantalla describiendo cómo se veía («la gráfica azul», «código en fondo oscuro»). Un modelo pequeño (CLIP, solo CPU, sin GPU) convierte cada captura guardada en un vector; se indexa en segundo plano, con prioridad baja y solo cuando el OCR está libre. Al borrar una captura se borra su vector.</p>
+      <Row label="Búsqueda visual activada" help={v.available ? "Apagada, no se indexan capturas nuevas y Buscar usa solo texto." : "Se activará sola cuando descargues el modelo."}>
+        <Switch checked={settings.visual_search} label="Búsqueda visual activada" onChange={(on) => save({ visual_search: on })} />
+      </Row>
+      <Row label="Modelo" help={`${v.model} · ${v.device.toUpperCase()} · ${v.threads} hilo${v.threads === 1 ? "" : "s"} · ${v.model_dir}`}>
+        {v.available
+          ? <span className="num">{fmtBytes(v.model_bytes)} en disco</span>
+          : downloading
+            ? <span className="num">Descargando {dl.file || ""} {pct}%</span>
+            : <button type="button" className="btn btn-sm btn-primary" onClick={() => act(api.visualDownload, "Descargando el modelo…").then(load)}>Descargar modelo (≈ 300 MB)</button>}
+      </Row>
+      {dl.state === "error" && <p className="help" style={{ color: "var(--danger-ink)" }}>No se pudo descargar: {dl.error}</p>}
+      <Row label="Capturas indexadas" help={v.active ? (v.indexing ? "Indexando ahora…" : v.pending ? "Pendientes: se indexan cuando el equipo está libre." : "Al día.") : "Sin indexar mientras la búsqueda visual no esté activa."}>
+        <span className="num" data-testid="visual-count">{v.indexed} de {v.total} ({percent}%){v.ms_per_frame != null ? ` · ${v.ms_per_frame} ms/captura` : ""}</span>
+      </Row>
+      {v.available && (
+        <Row label="Volver a indexar" help="Borra todos los vectores y vuelve a calcularlos (por si cambias de modelo).">
+          <button type="button" className="btn btn-sm" onClick={() => act(api.visualReindex, "Se reindexarán todas las capturas.").then(load)}>Reindexar</button>
+        </Row>
+      )}
+      {v.last_error && <p className="help" style={{ color: "var(--danger-ink)" }}>{v.last_error}</p>}
+    </section>
+  );
+}
+
 export default function Ajustes() {
   const { status, act, refresh } = useApp();
   const [settings, setSettings] = useState(null);
@@ -122,6 +164,8 @@ export default function Ajustes() {
           <NumberField value={settings.image_max_width} min={320} max={3840} step={64} suffix="px" onCommit={(n) => save({ image_max_width: n })} />
         </Row>
       </section>
+
+      <VisualSection settings={settings} save={save} act={act} />
 
       <section className="panel-white mb-5">
         <h2 className="text-[17px] font-semibold">Retención</h2>

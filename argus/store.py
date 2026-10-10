@@ -38,6 +38,7 @@ class FrameStore:
     def __init__(self, db: Database, frames_dir: Path):
         self.db = db
         self.frames_dir = frames_dir
+        self.delete_hooks: list = []  # called with the ids of every chunk of frames just deleted (visual search drops its cached vectors)
 
     # ---------- capture path ----------
     def last_frame(self, monitor: int) -> LastFrame | None:
@@ -179,12 +180,18 @@ class FrameStore:
                 self.db.conn.execute("BEGIN")
                 try:
                     self.db.conn.execute(f"DELETE FROM blocks WHERE frame_id IN ({marks})", chunk)
+                    self.db.conn.execute(f"DELETE FROM frame_vectors WHERE frame_id IN ({marks})", chunk)
                     self.db.conn.execute(f"DELETE FROM frames_fts WHERE rowid IN ({marks})", chunk)
                     self.db.conn.execute(f"DELETE FROM frames WHERE id IN ({marks})", chunk)
                     self.db.conn.execute("COMMIT")
                 except Exception:
                     self.db.conn.execute("ROLLBACK")
                     raise
+            for hook in self.delete_hooks:
+                try:
+                    hook([row["id"] for row in rows])
+                except Exception:  # a cache that cannot be told must not stop the deletion
+                    pass
             for row in rows:
                 if row["image_path"]:
                     images.remove_images(self.frames_dir / row["image_path"], self.frames_dir / row["thumb_path"])

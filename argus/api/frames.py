@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 from fastapi.responses import FileResponse
 
+from ..visual import VisualUnavailable
 from .deps import epoch_range, services
 
 router = APIRouter(prefix="/api")
@@ -94,9 +95,35 @@ def search(
     to: str | None = None,
     app: str | None = Query(None, max_length=200),
     limit: int = Query(50, ge=1, le=200),
+    mode: str = Query("both", pattern="^(text|visual|both)$"),
 ):
+    """`mode`: text = OCR/titles/apps only, visual = how the screen looked (image embeddings), both = fused by rank (falls back to
+    text while there is no visual index). Hits carry `via` and `visual_score` when the visual side took part."""
     lo, hi = epoch_range(from_, to)
-    return services(request).queries.search(q, lo, hi, app, limit)
+    try:
+        return services(request).search(q, lo, hi, app, limit, mode)
+    except VisualUnavailable as error:
+        raise HTTPException(409, str(error)) from error
+
+
+@router.get("/frames/{frame_id}/similar")
+def similar_frames(
+    request: Request,
+    frame_id: int,
+    from_: str | None = Query(None, alias="from"),
+    to: str | None = None,
+    app: str | None = Query(None, max_length=200),
+    limit: int = Query(30, ge=1, le=100),
+    same_moment: bool = False,
+):
+    """Moments whose screen looks like this frame (the moment it belongs to is left out unless `same_moment`)."""
+    lo, hi = epoch_range(from_, to)
+    try:
+        return services(request).visual.similar(frame_id, limit, lo, hi, app, same_moment)
+    except VisualUnavailable as error:
+        raise HTTPException(409, str(error)) from error
+    except LookupError as error:
+        raise HTTPException(404, str(error)) from error
 
 
 @router.get("/apps")

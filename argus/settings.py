@@ -26,6 +26,7 @@ class Settings(BaseModel):
     image_max_width: int = Field(1280, ge=320, le=3840)
     thumb_max_width: int = Field(320, ge=64, le=1024)
     capture_scope: CaptureScope = "active"
+    visual_search: bool = True  # index the stored frames with the CPU image model and allow searching by how they look (needs the model files)
 
 
 class SettingsPatch(BaseModel):
@@ -43,6 +44,7 @@ class SettingsPatch(BaseModel):
     image_max_width: int | None = Field(None, ge=320, le=3840)
     thumb_max_width: int | None = Field(None, ge=64, le=1024)
     capture_scope: CaptureScope | None = None
+    visual_search: bool | None = None
 
 
 class SettingsStore:

@@ -18,6 +18,7 @@ from .recorder import Recorder
 from .settings import SettingsPatch, SettingsStore
 from .store import ExclusionStore, FrameStore
 from .timeparse import iso_local
+from .visual import VisualService
 from .worker import OcrWorker
 
 log = logging.getLogger("argus")
@@ -40,12 +41,14 @@ class Services:
         for note in self.backends.notes:
             log.info("capture: %s", note)
         self.ocr = OcrWorker(self.frames, s.ocr_backend, s.ocr_language)
+        self.visual = VisualService(config, self.db, self.frames, self.queries, self.settings, busy=lambda: self.ocr.depth)
         self.janitor = Janitor(self.frames, self.settings)
         self.recorder = Recorder(self.backends, self.settings, self.frames, self.exclusions, self.ocr, on_idle=self.janitor.run)
 
     # ---------- lifecycle ----------
     def start(self) -> None:
         self.ocr.start()
+        self.visual.start()
         if self.config.autostart:
             self.recorder.start()
         try:
@@ -55,6 +58,7 @@ class Services:
 
     def stop(self) -> None:
         self.recorder.stop()
+        self.visual.stop()
         self.ocr.stop()
         self.db.close()
 
@@ -62,8 +66,14 @@ class Services:
     def update_settings(self, patch: SettingsPatch | dict):
         merged = self.settings.update(patch)
         self.ocr.reconfigure(merged.ocr_backend, merged.ocr_language)
+        self.visual.on_settings_changed()
         self.recorder.wake()
         return merged
+
+    # ---------- search ----------
+    def search(self, q: str, start: float | None, end: float | None, app: str | None, limit: int, mode: str = "both") -> dict:
+        """OCR search, visual search or both fused (`mode` text | visual | both); see `argus.visual`."""
+        return self.visual.search(q, start, end, app, limit, mode)
 
     # ---------- status ----------
     def status(self) -> dict:
@@ -115,4 +125,5 @@ class Services:
             "data_dir": str(self.config.data_dir),
             "janitor_last_run": iso_local(self.janitor.last_run) if self.janitor.last_run else None,
             "ocr_available": ocr_availability(),
+            "visual": self.visual.status(),
         }

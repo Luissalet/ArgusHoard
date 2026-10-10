@@ -24,6 +24,7 @@ class Config:
     autostart: bool = True  # start the recorder thread with the app
     allowed_hosts: tuple[str, ...] = ()  # extra Host values (exact or *.suffix) besides localhost
     data_dir_configured: bool = False
+    visual_backend: str = "auto"  # auto (the CPU CLIP model when its files are downloaded) | fake (tests, demos) | none
 
     @property
     def db_path(self) -> Path:
@@ -52,4 +53,5 @@ class Config:
             autostart=env_flag("ARGUS_AUTOSTART", True),
             allowed_hosts=parse_allowed_hosts(env_str("ARGUS_ALLOWED_HOSTS")),
             data_dir_configured=bool(raw_dir),
+            visual_backend=env_str("ARGUS_VISUAL", "auto") or "auto",
         )

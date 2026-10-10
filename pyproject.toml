@@ -39,3 +39,4 @@ include = ["argus*"]
 testpaths = ["tests"]
 addopts = "-q"
 filterwarnings = ["ignore::DeprecationWarning"]
+markers = ["slow: runs the real visual model (skipped unless it is downloaded)"]

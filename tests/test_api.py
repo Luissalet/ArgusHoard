@@ -120,7 +120,7 @@ def test_agent_tools_and_call_auth(client):
     catalog = client.get("/api/agent/tools").json()
     names = [t["name"] for t in catalog["tools"]]
     assert names == [
-        "screen_status", "screen_search", "screen_timeline", "screen_frame_text", "screen_pin_frame", "screen_recent",
+        "screen_status", "screen_search", "screen_similar", "screen_timeline", "screen_frame_text", "screen_pin_frame", "screen_recent",
         "screen_activity", "screen_days", "screen_pause", "screen_resume", "screen_delete_range",
     ]
     assert all("Sinónimos:" in t["description"] for t in catalog["tools"])
