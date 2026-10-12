@@ -9,10 +9,31 @@ const exclusions = { exclusions: [{ id: 3, kind: "app", pattern: "keepass*", ena
 const deps = {
   getFrame: async (id) => { if (Number(id) !== 41 && Number(id) !== 42) throw new Error("Frame not found."); return { ...frame, id: Number(id) }; },
   getDays: async () => days,
+  getSessions: async () => ({ sessions: [{ first_id: 40, app: 'code', window_title: 'Current native session', count: 4 }] }),
   getSettings: async () => settings,
   getExclusions: async () => exclusions,
 };
 const ids = (ctx) => ctx.active_objects.map((o) => `${o.kind}:${o.object_id}`);
+
+test('cached sessions and search hits disappear when native records are removed', async () => {
+  const removed = { ...deps, getDays: async () => ({ days: [] }), getSessions: async () => ({ sessions: [] }), getFrame: async () => { throw new Error('404'); } };
+  const timeline = await buildContext({ hash: '#/linea', states: { timeline: { day: '2026-10-12', open_session: { first_id: 999, count: 1 } }, 'timeline-session': { session: 999, frame_id: 999 } }, ...removed });
+  assert.deepEqual(timeline.active_objects, []);
+  assert.equal(timeline.view.day, '2026-10-12');
+  const search = await buildContext({ hash: '#/buscar', states: { search: { ran: { q: 'current query' }, hits: [{ id: 999 }], draft: { q: 'pending query' } } }, ...removed });
+  assert.deepEqual(ids(search), ['search:current query']);
+  assert.equal(search.view.editor.fields.q, 'pending query');
+});
+
+test('cached sessions and search hits use metadata read from native records', async () => {
+  let params;
+  const timeline = await buildContext({ hash: '#/linea', states: { timeline: { day: '2026-10-12', app: 'code', open_session: { first_id: 40, window_title: 'Stale session title', count: 99 } } }, ...deps, getSessions: async value => { params = value; return { sessions: [{ first_id: 40, window_title: 'Native new session title', count: 2 }] }; } });
+  assert.deepEqual(params, { day: '2026-10-12', app: 'code' });
+  const session = timeline.active_objects.find(o => o.kind === 'session');
+  assert.equal(session.title, 'Native new session title');assert.equal(session.count, 2);
+  const search = await buildContext({ hash: '#/buscar', states: { search: { ran: { q: 'current query' }, hits: [{ id: 41, window_title: 'Stale hit title' }] } }, ...deps });
+  assert.equal(search.active_objects.find(o => o.kind === 'frame').title, frame.window_title);
+});
 
 test("route parsing maps the Spanish routes to page names and defaults to the timeline", () => {
   assert.equal(parseRoute("").page, "timeline");

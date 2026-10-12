@@ -59,7 +59,7 @@ const dirtyFields = (states) => {
 };
 
 // Pure core (dependencies injected so it can be tested): never throws; unknown or removed ids yield no object.
-export async function buildContext({ hash, states = {}, getFrame, getDays, getSettings, getExclusions }) {
+export async function buildContext({ hash, states = {}, getFrame, getDays, getSessions, getSettings, getExclusions }) {
   const route = parseRoute(hash);
   const active = [];
   const seen = new Set();
@@ -82,9 +82,11 @@ export async function buildContext({ hash, states = {}, getFrame, getDays, getSe
       if (info) add(dayObject(info));
     }
     if (t?.open_session) {
-      add(sessionObject(t.open_session));
+      const sessions = await safe(() => getSessions({ day: t.day, app: t.app }));
+      const session = (sessions?.sessions || []).find((s) => String(s.first_id) === String(t.open_session.first_id));
+      if (session) add(sessionObject(session));
       const sel = states["timeline-session"];
-      if (sel?.frame_id && String(sel.session) === String(t.open_session.first_id)) {
+      if (session && sel?.frame_id && String(sel.session) === String(session.first_id)) {
         const frame = await safe(() => getFrame(sel.frame_id));
         if (frame?.id) { add(frameObject(frame)); view.selected_frame_id = String(frame.id); }
       }
@@ -95,7 +97,11 @@ export async function buildContext({ hash, states = {}, getFrame, getDays, getSe
       view.search = pick(s.ran, ["q", "mode", "from", "to", "app", "similar_to", "moments_total"]);
       if (s.ran.q) add({ kind: "search", object_id: s.ran.q, title: s.ran.q, ...pick(s.ran, ["mode", "from", "to", "app", "moments_total"]) });
       if (s.ran.similar_to) add({ kind: "similar_search", object_id: String(s.ran.similar_to), title: `Similar to capture ${s.ran.similar_to}` });
-      for (const hit of (s.hits || []).slice(0, MAX_HITS)) if (hit?.id) add(frameObject({ ...hit, captured_at: hit.first_at }));
+      for (const hit of (s.hits || []).slice(0, MAX_HITS)) {
+        if (!hit?.id) continue;
+        const frame = await safe(() => getFrame(hit.id));
+        if (frame?.id) add(frameObject(frame));
+      }
     }
     if (s?.draft && (s.draft.q || s.draft.from || s.draft.to || s.draft.app)) {
       view.editor = { kind: "search-form", dirty: true, fields: pick(s.draft, ["q", "mode", "from", "to", "app"]) };
@@ -126,6 +132,7 @@ export function context() {
     states: readViewStates(),
     getFrame: (id) => api.frame(id),
     getDays: () => api.days(),
+    getSessions: (params) => api.sessions(params),
     getSettings: () => api.settings(),
     getExclusions: () => api.exclusions(),
   });
