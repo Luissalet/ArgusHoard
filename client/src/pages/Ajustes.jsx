@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
 import { useApp } from "../App.jsx";
 import { PageHeader, Switch } from "../components/ui.jsx";
 import { fmtBytes, fmtDateTime, fmtDuration, STATE_LABEL } from "../format.js";
+import { useCopilotRefresh, useCopilotView } from "../copilot-view.js";
 
 const OCR_OPTIONS = [
   { value: "auto", label: "Automático (winocr si existe, si no rapidocr)" },
@@ -23,16 +24,24 @@ function Row({ label, help, children }) {
   );
 }
 
-function NumberField({ value, onCommit, min, max, step = 1, suffix }) {
+function NumberField({ name, value, onCommit, min, max, step = 1, suffix }) {
   const [draft, setDraft] = useState(String(value));
-  useEffect(() => setDraft(String(value)), [value]);
+  const focused = useRef(false);
+  const previous = useRef(String(value));
+  // A new saved value (the assistant changed it) replaces the field unless the user is typing in it.
+  useEffect(() => {
+    const next = String(value);
+    setDraft((current) => (current === previous.current || !focused.current ? next : current));
+    previous.current = next;
+  }, [value]);
+  useCopilotView(`settings-field:${name}`, draft !== String(value) ? { name, saved: value, draft } : null);
   const commit = () => {
     const n = Number(draft);
     if (Number.isFinite(n) && n !== value) onCommit(n);
   };
   return (
     <label className="flex items-center gap-2">
-      <input type="number" className="field field-sm w-28 text-right num" value={draft} min={min} max={max} step={step} onChange={(e) => setDraft(e.target.value)} onBlur={commit} onKeyDown={(e) => e.key === "Enter" && commit()} />
+      <input type="number" className="field field-sm w-28 text-right num" value={draft} min={min} max={max} step={step} onChange={(e) => setDraft(e.target.value)} onFocus={() => { focused.current = true; }} onBlur={() => { focused.current = false; commit(); }} onKeyDown={(e) => e.key === "Enter" && commit()} />
       {suffix && <span className="help">{suffix}</span>}
     </label>
   );
@@ -92,6 +101,9 @@ export default function Ajustes() {
 
   const loadRules = () => api.exclusions().then((r) => setRules(r.exclusions)).catch(() => {});
   useEffect(() => { api.settings().then(setSettings).catch(() => {}); loadRules(); }, []);
+  // The assistant finished a turn: reload settings and rules in place (typed fields keep what the user wrote).
+  useCopilotRefresh(() => { api.settings().then(setSettings).catch(() => {}); loadRules(); });
+  useCopilotView("settings-exclusion-form", pattern.trim() ? { kind, pattern } : null);
 
   const save = async (patch) => {
     const updated = await act(() => api.updateSettings(patch));
@@ -144,10 +156,10 @@ export default function Ajustes() {
           <Switch checked={settings.enabled} label="Grabación activada" onChange={(v) => save({ enabled: v })} />
         </Row>
         <Row label="Intervalo" help="Segundos entre capturas. Las pantallas iguales no se duplican: solo se alarga su duración.">
-          <NumberField value={settings.interval_s} min={1} max={600} suffix="s" onCommit={(n) => save({ interval_s: n })} />
+          <NumberField name="interval_s" value={settings.interval_s} min={1} max={600} suffix="s" onCommit={(n) => save({ interval_s: n })} />
         </Row>
         <Row label="Sensibilidad al cambio" help="Celdas de una cuadrícula 384×216 que deben cambiar para guardar una pantalla nueva. Más alto = menos capturas.">
-          <NumberField value={settings.dedupe_threshold} min={0} max={5000} suffix="celdas" onCommit={(n) => save({ dedupe_threshold: n })} />
+          <NumberField name="dedupe_threshold" value={settings.dedupe_threshold} min={0} max={5000} suffix="celdas" onCommit={(n) => save({ dedupe_threshold: n })} />
         </Row>
         <Row label="Ámbito de captura" help={`Con «solo el monitor activo» se captura y se lee únicamente la pantalla donde está la ventana en primer plano (${status.monitors} monitores detectados). Si no se sabe cuál es, se usa el principal.`}>
           <select className="field field-sm" value={settings.capture_scope} onChange={(e) => save({ capture_scope: e.target.value })}>
@@ -161,7 +173,7 @@ export default function Ajustes() {
           </select>
         </Row>
         <Row label="Ancho máximo de imagen" help="Las capturas se guardan en WebP reducidas a este ancho; el OCR usa la resolución original.">
-          <NumberField value={settings.image_max_width} min={320} max={3840} step={64} suffix="px" onCommit={(n) => save({ image_max_width: n })} />
+          <NumberField name="image_max_width" value={settings.image_max_width} min={320} max={3840} step={64} suffix="px" onCommit={(n) => save({ image_max_width: n })} />
         </Row>
       </section>
 
@@ -170,10 +182,10 @@ export default function Ajustes() {
       <section className="panel-white mb-5">
         <h2 className="text-[17px] font-semibold">Retención</h2>
         <Row label="Conservar durante" help="Las capturas más antiguas se borran automáticamente (imágenes y texto). 0 = conservar siempre.">
-          <NumberField value={settings.retention_days} min={0} max={3650} suffix="días" onCommit={(n) => save({ retention_days: n })} />
+          <NumberField name="retention_days" value={settings.retention_days} min={0} max={3650} suffix="días" onCommit={(n) => save({ retention_days: n })} />
         </Row>
         <Row label="Límite de disco" help="Al superarlo se borran primero las capturas más antiguas.">
-          <NumberField value={settings.storage_cap_mb} min={100} max={1000000} step={100} suffix="MB" onCommit={(n) => save({ storage_cap_mb: n })} />
+          <NumberField name="storage_cap_mb" value={settings.storage_cap_mb} min={100} max={1000000} step={100} suffix="MB" onCommit={(n) => save({ storage_cap_mb: n })} />
         </Row>
         <div className="help pt-2">Para borrar un tramo concreto usa «Borrar este día» en la línea de tiempo o pide al asistente que borre un rango.</div>
       </section>

@@ -3,6 +3,7 @@ import { api } from "../api.js";
 import { useApp } from "../App.jsx";
 import { Empty, PageHeader } from "../components/ui.jsx";
 import { fmtDay, fmtDuration, fmtTime, localDay } from "../format.js";
+import { useCopilotRefresh, useCopilotView } from "../copilot-view.js";
 
 function FrameCard({ frame, current, onOpen }) {
   return (
@@ -22,6 +23,8 @@ function FrameCard({ frame, current, onOpen }) {
 function SessionFrames({ session, openFrame }) {
   const [frames, setFrames] = useState(null);
   const [selected, setSelected] = useState(0);
+  const selectedFrame = frames?.[selected];
+  useCopilotView("timeline-session", selectedFrame ? { session: session.first_id, frame_id: selectedFrame.id, index: selected, total: frames.length } : null);
   useEffect(() => {
     let alive = true;
     api.timeline({ from: session.start, to: session.end, app: session.app, title: session.window_title, order: "asc", limit: 500 })
@@ -100,6 +103,15 @@ export default function Timeline() {
     const timer = setInterval(load, 15000); // today keeps growing
     return () => clearInterval(timer);
   }, [day, status?.state, load]);
+
+  const openSession = useMemo(() => (data?.sessions || []).find((s) => s.first_id === open) || null, [data, open]);
+  useCopilotView("timeline", {
+    day,
+    app: app || null,
+    open_session: openSession ? { first_id: openSession.first_id, app: openSession.app, window_title: openSession.window_title, start: openSession.start, end: openSession.end, count: openSession.count, duration_s: Math.round(openSession.duration_s) } : null,
+  });
+  // The assistant finished a turn (it may have deleted a range or captured more): reload the day and the open session in place.
+  useCopilotRefresh(() => { load(); api.days().then((d) => setDays(d.days)).catch(() => {}); });
 
   const dayInfo = useMemo(() => days.find((d) => d.day === day), [days, day]);
   const apps = useMemo(() => {

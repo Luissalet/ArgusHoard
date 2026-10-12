@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from
 import { api } from "../api.js";
 import { useApp } from "../App.jsx";
 import { fmtDateTime, fmtDuration } from "../format.js";
+import { useCopilotRefresh } from "../copilot-view.js";
 
 // Text layer over the image: every OCR block is a transparent, selectable span.
 function OcrLayer({ frame, size, showBoxes }) {
@@ -48,6 +49,9 @@ export default function FrameViewer({ frameId, onClose, onNavigate }) {
     api.frame(frameId).then((data) => alive && setFrame(data)).catch((e) => alive && setError(e.message));
     return () => { alive = false; };
   }, [frameId]);
+
+  // The assistant may have pinned or unpinned this capture: reload its detail in place (no blank state, the image stays).
+  useCopilotRefresh(() => { api.frame(frameId).then((data) => setFrame((current) => (current?.id === data.id ? data : current))).catch(() => {}); });
 
   const measure = useCallback(() => {
     const img = imageRef.current;

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { api } from "../api.js";
 import { Empty, PageHeader } from "../components/ui.jsx";
 import { dayOffset, fmtDay, fmtDuration, localDay } from "../format.js";
+import { useCopilotRefresh, useCopilotView } from "../copilot-view.js";
 
 const PRESETS = [
   { label: "Hoy", from: () => localDay(), to: () => localDay() },
@@ -16,6 +17,17 @@ export default function Actividad() {
   const [data, setData] = useState(null);
   const [days, setDays] = useState([]);
   const [error, setError] = useState(null);
+
+  useCopilotView("activity", {
+    from,
+    to,
+    total_seconds: data ? Math.round(data.total_seconds) : null,
+    top_apps: (data?.apps || []).slice(0, 5).map((a) => ({ app: a.app, seconds: Math.round(a.seconds) })),
+  });
+  useCopilotRefresh(() => {
+    api.apps({ from, to }).then(setData).catch(() => {});
+    api.days().then((d) => setDays(d.days)).catch(() => {});
+  });
 
   useEffect(() => {
     let alive = true;

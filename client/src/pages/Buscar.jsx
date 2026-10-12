@@ -3,6 +3,7 @@ import { api } from "../api.js";
 import { useApp } from "../App.jsx";
 import { Empty, PageHeader } from "../components/ui.jsx";
 import { dayOffset, fmtDuration, fmtRelative, fmtTime } from "../format.js";
+import { useCopilotRefresh, useCopilotView } from "../copilot-view.js";
 
 const MODES = [
   { value: "both", label: "Texto y aspecto" },
@@ -91,6 +92,7 @@ export default function Buscar() {
   const [similarTo, setSimilarTo] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [ran, setRan] = useState(null); // the parameters of the search whose results are on screen
 
   const visual = status?.visual;
   const visualActive = Boolean(visual?.active);
@@ -104,7 +106,10 @@ export default function Buscar() {
     setError(null);
     setSimilarTo(null);
     try {
-      setResult(await api.search({ q: q.trim(), from, to, app, limit: 60, mode }));
+      const params = { q: q.trim(), from, to, app, mode };
+      const found = await api.search({ ...params, limit: 60 });
+      setResult(found);
+      setRan({ ...params, moments_total: found.moments_total });
     } catch (e) {
       setError(e.message);
     } finally {
@@ -116,8 +121,10 @@ export default function Buscar() {
     setLoading(true);
     setError(null);
     try {
-      setResult(await api.similar(id, { from, to, app, limit: 40 }));
+      const found = await api.similar(id, { from, to, app, limit: 40 });
+      setResult(found);
       setSimilarTo(id);
+      setRan({ from, to, app, similar_to: id, moments_total: found.moments_total });
     } catch (e) {
       setError(e.message);
     } finally {
@@ -131,6 +138,25 @@ export default function Buscar() {
       if (id) findSimilar(id);
     }
   }, [pendingSimilar, takeSimilar, findSimilar]);
+
+  // The assistant finished a turn: run the same search again (the form fields the user is typing are left alone).
+  useCopilotRefresh(async () => {
+    if (!ran) return;
+    try {
+      const found = ran.similar_to
+        ? await api.similar(ran.similar_to, { from: ran.from, to: ran.to, app: ran.app, limit: 40 })
+        : await api.search({ q: ran.q, from: ran.from, to: ran.to, app: ran.app, mode: ran.mode, limit: 60 });
+      setResult(found);
+      setRan((current) => current && { ...current, moments_total: found.moments_total });
+    } catch { /* the old results stay */ }
+  });
+  const draftNow = { q: q.trim(), mode, from, to, app };
+  const unsaved = ran && !ran.similar_to ? JSON.stringify(draftNow) !== JSON.stringify({ q: ran.q, mode: ran.mode, from: ran.from, to: ran.to, app: ran.app }) : Boolean(q.trim() || from || to || app);
+  useCopilotView("search", {
+    ran,
+    hits: result ? result.hits.slice(0, 5).map((h) => ({ id: h.id, window_title: h.window_title, app: h.app, first_at: h.first_at })) : [],
+    draft: unsaved ? draftNow : null,
+  });
 
   const preset = (days) => { setFrom(dayOffset(-days)); setTo(""); };
   const visualNote = result && result.mode !== "similar" && mode !== "text" && result.visual && !result.visual.used ? result.visual.reason : null;

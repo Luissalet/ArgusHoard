@@ -202,6 +202,30 @@ uno int8 reduce el tamaño a la mitad y ordena claramente peor.
 Un aviso en todas las páginas indica **Argus está mirando / en pausa / modo
 privado / captura desactivada**.
 
+## Panel del asistente Faustus
+
+Todas las páginas tienen un botón flotante **Faustus** (abajo a la derecha) que abre el asistente Faustus en un panel
+lateral, con una conversación que se conserva al recargar. La parte de servidor viene gratis de Hoard Link
+(`install_spa` monta el relé y añade el lanzador al HTML); la interfaz le cuenta al panel qué hay en pantalla con
+`window.hoardCopilot.context()` (`client/src/copilot-context.js`). Qué lleva cada turno, además de la ruta y el título:
+
+| Vista | Objetos reales enviados (`active_objects`) | Entrada sin guardar (`view.editor`) |
+|---|---|---|
+| Línea de tiempo | el día (`day`: capturas, ocultas, segundos), la sesión desplegada (`session`, id = su primera captura), la captura elegida en el deslizador (`frame`) | |
+| Buscar | la consulta ejecutada (`search`) o la captura con la que se comparó (`similar_search`), sus cinco mejores momentos como objetos `frame` | el formulario de búsqueda si difiere de la búsqueda ejecutada |
+| Actividad | el periodo (`period`: tiempo total y apps principales) | |
+| Ajustes | los ajustes (`settings`), cada regla de exclusión (`exclusion`) | campos numéricos escritos y sin confirmar, el formulario «Añadir exclusión» |
+| cualquiera | la captura abierta en el visor (`frame`: título, aplicación, hora, estado del OCR, fijada) | |
+
+El texto reconocido de la pantalla nunca va en ese contexto: el asistente lo lee cuando lo necesita con sus propias
+herramientas (`screen_frame_text`). Cuando el asistente termina un turno, la vista abierta se recarga en el sitio (estado,
+día y sesión abierta, última búsqueda, ajustes y reglas, captura abierta) sin tocar lo que estés escribiendo. Los ajustes se
+guardan campo a campo (`PUT /api/settings` acepta un objeto parcial), así que un cambio del asistente no lo pisa el
+formulario.
+
+Se apaga con `HOARD_COPILOT=0` en el entorno (o `install_spa(app, STATIC_DIR, copilot=False)`); el manifiesto declara el
+panel en `x-family.copilot` de `faustus-plugin.json`.
+
 ## API
 
 Todas las rutas escuchan solo en `127.0.0.1` y rechazan otros hosts u orígenes.
@@ -224,6 +248,10 @@ Todas las rutas escuchan solo en `127.0.0.1` y rechazan otros hosts u orígenes.
 | `GET /api/days` | días con datos (capturas, momentos ocultos, segundos) |
 | `DELETE /api/frames?from&to` | borrar un tramo (definitivo) |
 | `GET /api/agent/tools`, `POST /api/agent/call` | catálogo de herramientas y puente MCP (token Bearer) |
+| `GET /api/copilot/info` | identidad del panel: id y nombre de la app, id del espacio de datos, URL del panel y URL de ajustes del asistente; 503 mientras no se alcanza el servicio del asistente (`HOARD_COPILOT=0` deja fuera las cuatro rutas) |
+| `GET /api/copilot/panel.js` | el script del panel, servido por la app para que la página siga en el mismo origen |
+| `/api/copilot/proxy` | relé hacia el servicio del asistente (el token del servicio queda en el servidor; la identidad de la app se fuerza) |
+| `GET /api/copilot/launcher.js` | el botón flotante y el panel lateral, añadidos a cada página HTML |
 
 `from`/`to` aceptan fechas ISO, `AAAA-MM-DD` (día completo) y expresiones:
 `hoy`, `ayer`, `anteayer`, `esta mañana`, `esta tarde`, `anoche`,
