@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api.js";
 import { Banner, Toast } from "./components/ui.jsx";
+import { useCopilotRefresh, useCopilotView } from "./copilot-view.js";
 import FrameViewer from "./components/FrameViewer.jsx";
 import Timeline from "./pages/Timeline.jsx";
 import Buscar from "./pages/Buscar.jsx";
@@ -56,6 +57,10 @@ export default function App() {
     const timer = setInterval(refresh, 5000);
     return () => clearInterval(timer);
   }, [refresh]);
+
+  // The assistant finished a turn: reload the status (every page reloads itself the same way); open views keep their typed fields.
+  useCopilotRefresh(refresh);
+  useCopilotView("viewer", viewer ? { frame_id: viewer } : null);
 
   const notify = useCallback((message) => setToast(message), []);
   const act = useCallback(

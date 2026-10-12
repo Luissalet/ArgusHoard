@@ -182,6 +182,29 @@ the 335 MB fp32 file while an int8 one halves the size and ranks clearly worse.
 A banner on every page says **Argus está mirando / en pausa / modo privado /
 captura desactivada**.
 
+## Faustus assistant panel
+
+Every page has a floating **Faustus** button (bottom right) that opens the Faustus assistant in a side panel, with one
+conversation kept across reloads. The server side comes for free from the shared Hoard Link (`install_spa` mounts the relay
+and adds the launcher to the HTML); the UI tells the panel what is on screen through `window.hoardCopilot.context()`
+(`client/src/copilot-context.js`). What each turn carries, beside the page route and title:
+
+| View | Real objects sent (`active_objects`) | Unsaved input (`view.editor`) |
+|---|---|---|
+| Línea de tiempo | the day (`day`: frames, hidden, seconds), the expanded session (`session`, id = its first capture), the capture picked in the scrubber (`frame`) | |
+| Buscar | the executed query (`search`) or the capture it was compared with (`similar_search`), its five best moments as `frame` objects | the search form when it differs from the executed search |
+| Actividad | the period (`period`: total time and top apps) | |
+| Ajustes | the settings (`settings`), every exclusion rule (`exclusion`) | numeric fields typed but not committed, the "add exclusion" form |
+| any page | the capture open in the viewer dialog (`frame`: title, app, time, OCR state, pinned) | |
+
+The recognised screen text is never put in that context: the assistant reads it on demand with its own tools
+(`screen_frame_text`). When the assistant finishes a turn the open view reloads in place (status, day and open session,
+the last search, settings and rules, the open capture); typed fields are left alone. Settings are saved one field at a
+time (`PUT /api/settings` takes a partial object), so a change made by the assistant is never overwritten by the form.
+
+Turn it off with `HOARD_COPILOT=0` in the environment (or `install_spa(app, STATIC_DIR, copilot=False)`); the manifest
+declares the panel under `x-family.copilot` in `faustus-plugin.json`.
+
 ## API
 
 All routes are bound to `127.0.0.1` and refuse other hosts/origins.
@@ -204,6 +227,10 @@ All routes are bound to `127.0.0.1` and refuse other hosts/origins.
 | `GET /api/days` | days with data (frames, hidden ticks, seconds) |
 | `DELETE /api/frames?from&to` | delete a range (permanent) |
 | `GET /api/agent/tools`, `POST /api/agent/call` | tool catalog and the MCP bridge (Bearer token) |
+| `GET /api/copilot/info` | the panel's identity: app id and name, data space id, panel URL and the assistant's settings URL; 503 while the assistant service cannot be reached (`HOARD_COPILOT=0` leaves all four routes out) |
+| `GET /api/copilot/panel.js` | the panel's script, served through the app so the page stays same-origin |
+| `/api/copilot/proxy` | relay to the assistant service (the service token stays on the server; the app identity is forced) |
+| `GET /api/copilot/launcher.js` | the floating button and side panel, added to every HTML page |
 
 `from`/`to` accept ISO datetimes, `YYYY-MM-DD` (whole day) and phrases:
 `hoy`, `ayer`, `anteayer`, `esta mañana`, `esta tarde`, `anoche`, `hace 2 horas`,
