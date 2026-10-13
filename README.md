@@ -247,7 +247,7 @@ create a new frame. Imports preserve full image dimensions and are pinned agains
 The displayed date records its basis (file modification time, an explicitly supplied ISO date, or upload time).
 Imports have `origin=import`; they do not add observed application time, recent screen activity or recorded
 sessions. `screen_import_list` pages by frame ID, including equal timestamps; `screen_frame_text` reads their OCR.
-Folder imports are explicit, with optional recursion; continuous folder watching is not included.
+One-time folder imports are explicit, with optional recursion. For continuous import of new or modified screenshots, use Automatic folders below.
 
 The bridge (`mcp_server.py`) fetches the tool list from the running app and
 proxies every call to `POST /api/agent/call` with the token from

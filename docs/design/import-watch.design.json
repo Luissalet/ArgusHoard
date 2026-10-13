@@ -1,0 +1,330 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-13T14:13:52Z",
+  "title": "Design System: Argus — carpetas automáticas",
+  "extensions": {
+    "source": {
+      "commit": "d6262016147ee57356a30ac9847366206e784e8e",
+      "task": 481,
+      "submissionRevision": 1,
+      "document": "docs/IMPORT-WATCH-DESIGN.md",
+      "scope": "client/src/pages/Importar.jsx: carpetas automáticas, incumbent Operate",
+      "productionActivationVerified": false,
+      "tonalRampBasis": "Synthesized OKLCH preview samples only; product primitives remain in document frontmatter."
+    },
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "Violeta Argus",
+        "tonalRamp": [
+          "oklch(15% .12 290)",
+          "oklch(27% .12 290)",
+          "oklch(38% .12 290)",
+          "oklch(50% .12 290)",
+          "oklch(61% .12 290)",
+          "oklch(73% .12 290)",
+          "oklch(84% .12 290)",
+          "oklch(95% .12 290)"
+        ]
+      },
+      "accent-strong": {
+        "role": "primary",
+        "displayName": "Violeta hover",
+        "tonalRamp": [
+          "oklch(15% .08 290)",
+          "oklch(27% .08 290)",
+          "oklch(38% .08 290)",
+          "oklch(50% .08 290)",
+          "oklch(61% .08 290)",
+          "oklch(73% .08 290)",
+          "oklch(84% .08 290)",
+          "oklch(95% .08 290)"
+        ]
+      },
+      "accent-ink": {
+        "role": "neutral",
+        "displayName": "Tinta de acento",
+        "tonalRamp": [
+          "oklch(15% .01 290)",
+          "oklch(27% .01 290)",
+          "oklch(38% .01 290)",
+          "oklch(50% .01 290)",
+          "oklch(61% .01 290)",
+          "oklch(73% .01 290)",
+          "oklch(84% .01 290)",
+          "oklch(95% .01 290)"
+        ]
+      },
+      "deep": {
+        "role": "neutral",
+        "displayName": "Fondo profundo",
+        "tonalRamp": [
+          "oklch(15% .02 285)",
+          "oklch(27% .02 285)",
+          "oklch(38% .02 285)",
+          "oklch(50% .02 285)",
+          "oklch(61% .02 285)",
+          "oklch(73% .02 285)",
+          "oklch(84% .02 285)",
+          "oklch(95% .02 285)"
+        ]
+      },
+      "sunken": {
+        "role": "neutral",
+        "displayName": "Campo hundido",
+        "tonalRamp": [
+          "oklch(15% .02 295)",
+          "oklch(27% .02 295)",
+          "oklch(38% .02 295)",
+          "oklch(50% .02 295)",
+          "oklch(61% .02 295)",
+          "oklch(73% .02 295)",
+          "oklch(84% .02 295)",
+          "oklch(95% .02 295)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Superficie",
+        "tonalRamp": [
+          "oklch(15% .02 290)",
+          "oklch(27% .02 290)",
+          "oklch(38% .02 290)",
+          "oklch(50% .02 290)",
+          "oklch(61% .02 290)",
+          "oklch(73% .02 290)",
+          "oklch(84% .02 290)",
+          "oklch(95% .02 290)"
+        ]
+      },
+      "elevated": {
+        "role": "neutral",
+        "displayName": "Superficie elevada",
+        "tonalRamp": [
+          "oklch(15% .025 290)",
+          "oklch(27% .025 290)",
+          "oklch(38% .025 290)",
+          "oklch(50% .025 290)",
+          "oklch(61% .025 290)",
+          "oklch(73% .025 290)",
+          "oklch(84% .025 290)",
+          "oklch(95% .025 290)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Borde",
+        "tonalRamp": [
+          "oklch(15% .025 290)",
+          "oklch(27% .025 290)",
+          "oklch(38% .025 290)",
+          "oklch(50% .025 290)",
+          "oklch(61% .025 290)",
+          "oklch(73% .025 290)",
+          "oklch(84% .025 290)",
+          "oklch(95% .025 290)"
+        ]
+      },
+      "border-hover": {
+        "role": "neutral",
+        "displayName": "Borde hover",
+        "tonalRamp": [
+          "oklch(15% .03 290)",
+          "oklch(27% .03 290)",
+          "oklch(38% .03 290)",
+          "oklch(50% .03 290)",
+          "oklch(61% .03 290)",
+          "oklch(73% .03 290)",
+          "oklch(84% .03 290)",
+          "oklch(95% .03 290)"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Texto principal",
+        "tonalRamp": [
+          "oklch(15% .015 290)",
+          "oklch(27% .015 290)",
+          "oklch(38% .015 290)",
+          "oklch(50% .015 290)",
+          "oklch(61% .015 290)",
+          "oklch(73% .015 290)",
+          "oklch(84% .015 290)",
+          "oklch(95% .015 290)"
+        ]
+      },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "Ayuda y estado",
+        "tonalRamp": [
+          "oklch(15% .01 290)",
+          "oklch(27% .01 290)",
+          "oklch(38% .01 290)",
+          "oklch(50% .01 290)",
+          "oklch(61% .01 290)",
+          "oklch(73% .01 290)",
+          "oklch(84% .01 290)",
+          "oklch(95% .01 290)"
+        ]
+      },
+      "danger-ink": {
+        "role": "secondary",
+        "displayName": "Error existente",
+        "tonalRamp": [
+          "oklch(15% .10 28)",
+          "oklch(27% .10 28)",
+          "oklch(38% .10 28)",
+          "oklch(50% .10 28)",
+          "oklch(61% .10 28)",
+          "oklch(73% .10 28)",
+          "oklch(84% .10 28)",
+          "oklch(95% .10 28)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Título de página",
+        "purpose": "Serif existente, no nuevo título de marca para el bloque."
+      },
+      "body": {
+        "displayName": "Texto operativo",
+        "purpose": "Formulario y contenido ordinario."
+      },
+      "button": {
+        "displayName": "Acción",
+        "purpose": "Controles principales y secundarios actuales."
+      },
+      "label": {
+        "displayName": "Etiqueta",
+        "purpose": "Nombre visible del campo."
+      },
+      "help": {
+        "displayName": "Ayuda y observación",
+        "purpose": "Cadencia, estado y errores por fuente."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "existing-control-transition",
+        "value": "background 0.16s, color 0.16s",
+        "purpose": "Botones existentes; eliminada por prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "library-two",
+        "value": "640px"
+      },
+      {
+        "name": "sidebar",
+        "value": "768px"
+      },
+      {
+        "name": "library-three",
+        "value": "1024px"
+      },
+      {
+        "name": "library-four",
+        "value": "1280px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botón secundario de carpetas",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Guardar o comprobar; control actual, sin nueva variante de marca.",
+      "html": "<button class=\"ds-watch-button\" type=\"button\">Guardar carpetas</button>",
+      "css": ".ds-watch-button{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:8px 15px;border:1px solid var(--hoard-border,#353444);border-radius:var(--hoard-radius,8px);background:var(--hoard-surface,#1b1a25);color:var(--hoard-text,#e2e1ec);font:600 13px/18px var(--hoard-font-sans,'Source Sans 3','Segoe UI',sans-serif);cursor:pointer;white-space:nowrap;transition:background .16s,color .16s}.ds-watch-button:hover{background:var(--hoard-elevated,#252431);border-color:var(--hoard-border-hover,#58566c)}.ds-watch-button:focus-visible{outline:2px solid var(--hoard-accent,#8f84f4);outline-offset:3px}.ds-watch-button:disabled{opacity:.45;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-watch-button{transition:none}}"
+    },
+    {
+      "name": "Botón principal anterior",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Elegir imágenes conserva su prioridad previa.",
+      "html": "<button class=\"ds-import-primary\" type=\"button\">Elegir imágenes</button>",
+      "css": ".ds-import-primary{display:inline-flex;align-items:center;min-height:38px;padding:8px 15px;border:1px solid var(--hoard-accent,#8f84f4);border-radius:var(--hoard-radius,8px);background:var(--hoard-accent,#8f84f4);color:var(--hoard-accent-ink,#13131b);font:600 13px/18px var(--hoard-font-sans,'Source Sans 3','Segoe UI',sans-serif);cursor:pointer;transition:background .16s,color .16s}.ds-import-primary:hover{background:var(--hoard-accent-strong,#b1a9f7);border-color:var(--hoard-accent-strong,#b1a9f7)}.ds-import-primary:focus-visible{outline:2px solid var(--hoard-accent,#8f84f4);outline-offset:3px}.ds-import-primary:disabled{opacity:.45;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-import-primary{transition:none}}"
+    },
+    {
+      "name": "Campo de carpetas",
+      "kind": "input",
+      "refersTo": "folder-field",
+      "description": "Textarea de dos filas, una carpeta por línea. El foco efectivo es borde de acento.",
+      "html": "<label class=\"ds-folder-label\"><span>Carpetas de capturas, una por línea</span><textarea class=\"ds-folder-field\" rows=\"2\" spellcheck=\"false\">D:/Capturas</textarea></label>",
+      "css": ".ds-folder-label{display:block;color:var(--hoard-text,#e2e1ec);font:600 12px/1.65 var(--hoard-font-sans,'Source Sans 3','Segoe UI',sans-serif)}.ds-folder-label>span{display:block;margin-bottom:4px}.ds-folder-field{display:block;width:100%;min-width:0;padding:8px 11px;border:1px solid var(--hoard-border,#353444);border-radius:var(--hoard-radius,8px);background:var(--hoard-sunken,#100f17);color:var(--hoard-text,#e2e1ec);font:400 13px/1.5 var(--hoard-font-sans,'Source Sans 3','Segoe UI',sans-serif)}.ds-folder-field:focus,.ds-folder-field:focus-visible{border-color:var(--hoard-accent,#8f84f4);outline:none}"
+    },
+    {
+      "name": "Recursión de carpetas",
+      "kind": "input",
+      "description": "Checkbox nativo separado de la recursión del importador puntual; no impone accent-color.",
+      "html": "<label class=\"ds-folder-recursive\"><input type=\"checkbox\" checked>Observar también subcarpetas</label>",
+      "css": ".ds-folder-recursive{display:flex;align-items:center;gap:8px;color:var(--hoard-text,#e2e1ec);font:400 14px/1.65 var(--hoard-font-sans,'Source Sans 3','Segoe UI',sans-serif)}.ds-folder-recursive input:focus-visible{outline:2px solid var(--hoard-accent,#8f84f4);outline-offset:3px}"
+    },
+    {
+      "name": "Estado de la última comprobación",
+      "kind": "custom",
+      "refersTo": "status",
+      "description": "Texto auxiliar: configuración y contadores de última observación, no totales históricos.",
+      "html": "<div class=\"ds-watch-status\" role=\"status\"><p>1 carpeta guardada · Última comprobación: 2026-10-13 16:03</p><p>0 importadas en la última comprobación · 0 esperando estabilidad</p></div>",
+      "css": ".ds-watch-status{overflow-wrap:break-word;color:var(--hoard-text-muted,#b5b4be);font:400 12px/1.65 var(--hoard-font-sans,'Source Sans 3','Segoe UI',sans-serif)}.ds-watch-status p{margin:0}"
+    },
+    {
+      "name": "Tarjeta de captura importada",
+      "kind": "card",
+      "refersTo": "capture-card",
+      "description": "Tarjeta previa con miniatura completa; muestra aquí su pie, sin inventar una imagen de producto.",
+      "html": "<button class=\"ds-import-card\" type=\"button\"><div class=\"ds-import-card-content\"><strong>factura.png</strong><p>2026-10-13 16:00 · Texto disponible</p><p>Archivo importado</p></div></button>",
+      "css": ".ds-import-card{display:block;width:100%;padding:8px;text-align:left;border:1px solid var(--hoard-border,#353444);border-radius:var(--hoard-radius-lg,10px);background:var(--hoard-surface,#1b1a25);color:var(--hoard-text,#e2e1ec);font:400 14px/1.65 var(--hoard-font-sans,'Source Sans 3','Segoe UI',sans-serif);cursor:pointer}.ds-import-card:hover{background:var(--hoard-elevated,#252431)}.ds-import-card:focus-visible{outline:2px solid var(--hoard-accent,#8f84f4);outline-offset:3px}.ds-import-card-content{padding:12px;overflow-wrap:break-word}.ds-import-card-content strong{font-weight:600}.ds-import-card-content p{margin:0;color:var(--hoard-text-muted,#b5b4be);font-size:12px}"
+    },
+    {
+      "name": "Navegación activa existente",
+      "kind": "nav",
+      "refersTo": "nav-active",
+      "description": "Importar capturas se mantiene en la navegación de la familia; muestra texto sin icono externo.",
+      "html": "<a class=\"ds-import-nav\" href=\"#\" aria-current=\"page\">Importar capturas</a>",
+      "css": ".ds-import-nav{display:flex;align-items:center;gap:10px;min-height:40px;padding:10px 13px;border-radius:var(--hoard-radius,8px);background:var(--hoard-elevated,#252431);color:var(--hoard-text,#e2e1ec);text-decoration:none;font:500 14px/1.65 var(--hoard-font-sans,'Source Sans 3','Segoe UI',sans-serif)}.ds-import-nav:hover{background:var(--hoard-elevated,#252431);color:var(--hoard-text,#e2e1ec)}.ds-import-nav:focus-visible{outline:2px solid var(--hoard-accent,#8f84f4);outline-offset:3px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Memoria a la vista — identidad existente",
+    "overview": "Ampliación Operate dentro de Importar capturas: configurar carpetas y consultar su incorporación a la biblioteca. Preserva tema oscuro, importación puntual, navegación y visor. Fuente d626201/R1; documentación de candidato sin certificación de integración Main.",
+    "keyCharacteristics": [
+      "Superficies oscuras y violeta Argus",
+      "Controles nativos y estado escrito",
+      "Borrador distinto de configuración guardada",
+      "Fecha del archivo distinta de última observación"
+    ],
+    "rules": [
+      {
+        "name": "Estado escrito",
+        "body": "El texto describe configuración, modo privado y última comprobación; el color refuerza, no sustituye.",
+        "section": "colors"
+      },
+      {
+        "name": "Observación concreta",
+        "body": "Dos firmas mtime/tamaño iguales no garantizan escritura atómica ni un plazo exacto.",
+        "section": "components"
+      },
+      {
+        "name": "Procedencia",
+        "body": "Una captura importada no aporta duración de pantalla observada.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do conservar la identidad oscura vigente.",
+      "Do distinguir borrador, configuración y última comprobación.",
+      "Do permitir ajuste de rutas, mensajes y acciones.",
+      "Do conservar historial y originales al detener carpetas."
+    ],
+    "donts": [
+      "Don't atribuir tiempo observado a archivos importados.",
+      "Don't equiparar firmas estables con atomicidad.",
+      "Don't presentar actualización de página como sondeo continuo.",
+      "Don't afirmar activación Main o pruebas propias desde recibos del autor."
+    ]
+  }
+}
