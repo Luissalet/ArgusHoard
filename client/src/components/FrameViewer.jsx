@@ -110,7 +110,7 @@ export default function FrameViewer({ frameId, onClose, onNavigate }) {
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex max-w-full flex-wrap items-center gap-2">
             <button type="button" className="btn btn-sm" disabled={!frame || !status?.visual?.active} onClick={() => findSimilar(frame.id)} title={status?.visual?.active ? "Busca otros momentos en los que la pantalla se veía parecida a esta" : "Requiere la búsqueda visual activa (Ajustes)"}>Buscar parecidas</button>
             <button type="button" className="btn btn-sm" disabled={!frame || savingPin} onClick={togglePin} aria-pressed={Boolean(frame?.pinned)} title="Las capturas fijadas se conservan durante la limpieza automática">{frame?.pinned ? "★ Fijada" : "☆ Fijar"}</button>
             <button type="button" className="btn btn-sm" disabled={!frame?.prev} onClick={() => onNavigate(frame.prev)} aria-label="Captura anterior">← Anterior</button>
