@@ -240,6 +240,15 @@ All routes are bound to `127.0.0.1` and refuse other hosts/origins.
 
 ## MCP tools
 
+Existing screenshots can be added from **Importar capturas**, by selecting images or supplying file/folder paths,
+and through `screen_import`. PNG, JPEG, still WebP and BMP use the ordinary local OCR and search library.
+Original files remain unchanged, repeated path + SHA-256 imports reuse the stored frame, and changed contents
+create a new frame. Imports preserve full image dimensions and are pinned against automatic cleanup.
+The displayed date records its basis (file modification time, an explicitly supplied ISO date, or upload time).
+Imports have `origin=import`; they do not add observed application time, recent screen activity or recorded
+sessions. `screen_import_list` pages by frame ID, including equal timestamps; `screen_frame_text` reads their OCR.
+Folder imports are explicit, with optional recursion; continuous folder watching is not included.
+
 The bridge (`mcp_server.py`) fetches the tool list from the running app and
 proxies every call to `POST /api/agent/call` with the token from
 `data/mcp-token`; it never opens the database.
@@ -257,6 +266,8 @@ proxies every call to `POST /api/agent/call` with the token from
 | `screen_days` | days that have data |
 | `screen_pause` / `screen_resume` | only when the user asks |
 | `screen_delete_range` | permanent deletion of a range (destructive) |
+| `screen_import` | import existing image files/folders, report duplicates and per-file errors |
+| `screen_import_list` | list imported frames, their source, OCR state and next page |
 
 Connect it from Faustus with `faustus-plugin.json`, or by hand:
 `{PYTHON} mcp_server.py` with env `ARGUS_URL=http://127.0.0.1:5183` and

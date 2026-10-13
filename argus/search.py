@@ -65,7 +65,7 @@ def group_moments(ranked: list[tuple[Candidate, float]], window_s: int = GROUP_W
     open_groups: dict[tuple, dict] = {}
     groups: list[dict] = []
     for candidate, rank in by_time:
-        key = (candidate.app, candidate.window_title, normalise_snippet(candidate.snippet))
+        key = (candidate.row.get("origin", "capture"), candidate.app, candidate.window_title, normalise_snippet(candidate.snippet))
         group = open_groups.get(key)
         if group is not None and candidate.captured_at - group["last_at"] <= window_s:
             group["members"].append((candidate, rank))

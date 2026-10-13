@@ -105,7 +105,7 @@ export default function FrameViewer({ frameId, onClose, onNavigate }) {
             <div className="truncate text-[15px] font-semibold">{frame ? frame.window_title || "(sin título de ventana)" : "Cargando…"}</div>
             {frame && (
               <div className="help">
-                {frame.app || "app desconocida"} · {fmtDateTime(frame.captured_at)} · {fmtDuration(frame.duration_s)} en pantalla · monitor {frame.monitor}
+                {frame.origin === "import" ? `Archivo importado · ${frame.time_basis === "file_mtime" ? "fecha del archivo" : "fecha indicada"}: ${fmtDateTime(frame.captured_at)}` : <>{frame.app || "app desconocida"} · {fmtDateTime(frame.captured_at)} · {fmtDuration(frame.duration_s)} en pantalla · monitor {frame.monitor}</>}
                 {frame.ocr_status !== "done" && <span className="chip chip-warn ml-2">OCR: {frame.ocr_status}</span>}
               </div>
             )}

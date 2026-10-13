@@ -15,6 +15,7 @@ from .timeparse import resolve_range, to_epoch
 from .visual import VisualUnavailable
 
 AGENT_INSTRUCTIONS = """Argus's Hoard is the user's own screen history: periodic screenshots of their PC, OCR'd and searchable, stored only on their machine.
+screen_import adds existing screenshot files/folders to the same searchable library; screen_import_list lists them. Imported frames have origin=import, explicit file provenance and time_basis; they are pinned and do not imply observed application activity. screen_recent, screen_timeline and screen_activity describe observed captures only. Search and screen_frame_text cover both.
 Quote OCR text as OCR text: it may contain recognition errors, and a window title is what the app reported, not a fact you verified.
 Never speculate beyond what the frames show; if a frame lacks text (ocr_status != done) say so instead of guessing.
 screen_search also finds screens by how they looked (mode visual or both, the default): describe the scene ("la gráfica azul", "código en fondo oscuro", "a blue bar chart"). A visual hit has via ["visual"] and a visual_score (cosine, about 0.2-0.35 for a real match); it exists only once the image index is built (screen_status, visual), otherwise the search is text only. screen_similar finds screens that look like a given frame.
@@ -126,6 +127,7 @@ def run_search(services: Services, args: SearchArgs) -> dict:
     hits = [
         {"id": h["id"], "time": h["captured_at"], "first_at": h["first_at"], "last_at": h["last_at"], "count": h["count"],
          "frame_ids": h["frame_ids"][:20], "duration_s": h["duration_s"], "app": h["app"], "window_title": h["window_title"], "snippet": h["snippet"],
+         "origin": h.get("origin", "capture"), "time_basis": h.get("time_basis", "capture"), "source_path": h.get("source_path", ""),
          "via": h.get("via", ["text"]), "visual_score": h.get("visual_score")}
         for h in result["hits"]
     ]
@@ -144,6 +146,7 @@ def run_similar(services: Services, args: SimilarArgs) -> dict:
     hits = [
         {"id": h["id"], "time": h["captured_at"], "first_at": h["first_at"], "last_at": h["last_at"], "count": h["count"],
          "frame_ids": h["frame_ids"][:20], "duration_s": h["duration_s"], "app": h["app"], "window_title": h["window_title"],
+         "origin": h.get("origin", "capture"), "time_basis": h.get("time_basis", "capture"), "source_path": h.get("source_path", ""),
          "snippet": h["snippet"], "visual_score": h["visual_score"]}
         for h in result["hits"]
     ]
@@ -181,7 +184,7 @@ def _segments(frames: list[dict], limit: int) -> tuple[list[dict], float | None]
 def run_timeline(services: Services, args: TimelineArgs) -> dict:
     lo, hi, resolved = _range(args)
     if not args.group:
-        result = services.queries.timeline(lo, hi, args.app, None, args.limit, args.cursor)
+        result = services.queries.timeline(lo, hi, args.app, None, args.limit, args.cursor, capture_only=True)
         frames = [
             {"id": f["id"], "time": f["captured_at"], "until": f["until_at"], "duration_s": f["duration_s"], "app": f["app"],
              "window_title": f["window_title"], "monitor": f["monitor"], "ocr_status": f["ocr_status"], "excerpt": f["excerpt"]}
@@ -192,7 +195,7 @@ def run_timeline(services: Services, args: TimelineArgs) -> dict:
     # Grouped: read enough frames to fill `limit` segments (a window kept open for an hour is
     # hundreds of frames), then fold them. The payload stays small whatever the period.
     batch = min(2000, max(200, args.limit * 25))
-    result = services.queries.timeline(lo, hi, args.app, None, batch, args.cursor)
+    result = services.queries.timeline(lo, hi, args.app, None, batch, args.cursor, capture_only=True)
     segments, cut = _segments(result["frames"], args.limit)
     if cut is None and result["next_cursor"] is not None:
         # The batch ended inside the last segment: continue from its oldest frame next time.
@@ -259,6 +262,17 @@ def run_delete_range(services: Services, args: DeleteRangeArgs) -> dict:
     return {"ok": True, "deleted": deleted, "resolved": resolved}
 
 
+from .imports import ScreenImportArgs, ScreenImportListArgs, import_paths
+
+
+def run_import(services: Services, args: ScreenImportArgs) -> dict:
+    return import_paths(services, args)
+
+
+def run_import_list(services: Services, args: ScreenImportListArgs) -> dict:
+    return services.queries.imported(args.limit, args.before)
+
+
 TOOLS: list[Tool] = [
     Tool("screen_status", "Is Argus recording? State, OCR queue, last capture, disk and retention. Keywords: estado, grabando, pausado.\nWhether Argus is recording (watching, paused, private or disabled), OCR queue depth, last capture, disk usage and retention.\nSinónimos: estado, pantalla, está grabando, pausa, modo privado, espacio en disco.", Empty, ann(True), run_status),
     Tool("screen_search", "Search the screen history by text or by how it looked. Keywords: buscar en pantalla, qué vi, gráfica azul.\nText side: OCR, window titles and app names, BM25 (title weighs most). Visual side (`mode` visual or both, default both): a description like 'la gráfica azul' or 'código en fondo oscuro' finds the screen; hits carry `via` and `visual_score`. Each hit is a moment: near-identical frames of one window folded (first_at, last_at, count, frame_ids best first; `id` is that frame). Best first step for 'that error I saw'.\nSinónimos: buscar, pantalla, error que vi, texto que vi, dónde leí, ventana, aplicación, ayer, hace un rato.", SearchArgs, ann(True), run_search),
@@ -272,6 +286,8 @@ TOOLS: list[Tool] = [
     Tool("screen_pause", "Pause screen recording until resumed (only when asked). Keywords: pausar, deja de grabar, privado.\nPause recording until screen_resume is called (or the user resumes from the app). Only when the user asks for it.\nSinónimos: pausa, parar, deja de grabar, deja de mirar, pantalla.", Empty, ann(False, False, True), run_pause),
     Tool("screen_resume", "Resume recording (also leaves private mode). Only when the user asks for it.\nSinónimos: reanudar, continuar, vuelve a grabar, vuelve a mirar, pantalla.", Empty, ann(False, False, True), run_resume),
     Tool("screen_delete_range", "Permanently delete frames between two times (only when asked; no undo). Keywords: borrar, eliminar capturas.\nPermanently delete every frame (images and text) between two times. Only when the user explicitly asks; there is no undo.\nSinónimos: borrar, eliminar, olvidar, borra lo de ayer, borra esta tarde, privacidad, pantalla.", DeleteRangeArgs, ann(False, True, True), run_delete_range),
+    Tool("screen_import", "Import existing screenshots or folders for local OCR. Importar capturas guardadas.\nOriginal files remain unchanged; repeats reuse existing frames. Imports are pinned and do not imply observed screen activity. Sinónimos: importar imágenes, carpeta, archivo, capturas. Keywords: screenshots, folder, OCR, archive.", ScreenImportArgs, ann(False, False, False), run_import),
+    Tool("screen_import_list", "List imported screenshots with source and OCR status. Listar capturas importadas.\nUse next_before to continue, then screen_frame_text to read OCR. Sinónimos: imágenes importadas, archivo, biblioteca de capturas. Keywords: imported files, screenshots, image library.", ScreenImportListArgs, ann(True), run_import_list),
 ]
 
 TOOLS_BY_NAME = {tool.name: tool for tool in TOOLS}

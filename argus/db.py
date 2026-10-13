@@ -76,6 +76,16 @@ MIGRATIONS: list[str] = [
     );
     CREATE INDEX frame_vectors_model ON frame_vectors(model);
     """,
+    # 4: explicit file provenance for screenshots imported into the same OCR library
+    """
+    ALTER TABLE frames ADD COLUMN origin TEXT NOT NULL DEFAULT 'capture';
+    ALTER TABLE frames ADD COLUMN source_path TEXT NOT NULL DEFAULT '';
+    ALTER TABLE frames ADD COLUMN source_sha256 TEXT NOT NULL DEFAULT '';
+    ALTER TABLE frames ADD COLUMN time_basis TEXT NOT NULL DEFAULT 'capture';
+    ALTER TABLE frames ADD COLUMN imported_at REAL;
+    CREATE UNIQUE INDEX frames_import_source ON frames(source_path, source_sha256) WHERE origin = 'import';
+    CREATE INDEX frames_origin_id ON frames(origin, id);
+    """,
 ]
 
 

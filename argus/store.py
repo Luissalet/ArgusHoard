@@ -44,7 +44,7 @@ class FrameStore:
     def last_frame(self, monitor: int) -> LastFrame | None:
         with self.db.lock:
             row = self.db.conn.execute(
-                "SELECT id, phash, captured_at, until_at, window_title, app FROM frames WHERE monitor = ? ORDER BY captured_at DESC LIMIT 1",
+                "SELECT id, phash, captured_at, until_at, window_title, app FROM frames WHERE monitor = ? AND origin = 'capture' ORDER BY captured_at DESC LIMIT 1",
                 (monitor,),
             ).fetchone()
         if row is None:

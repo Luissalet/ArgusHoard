@@ -193,6 +193,13 @@ uno int8 reduce el tamaño a la mitad y ordena claramente peor.
   como «hoy 17:32–17:41» / «ayer 09:10».
 - **Actividad**: tiempo por aplicación (barras), títulos de ventana más
   frecuentes, tabla por día.
+- **Importar capturas**: selección de imágenes o rutas de archivos/carpetas, con subcarpetas opcionales.
+  PNG, JPEG, WebP estático y BMP pasan por el OCR y la búsqueda local normales. Conserva el original,
+  la resolución y la procedencia; reconoce repetidos por ruta + SHA-256 y guarda una nueva captura cuando
+  cambia el contenido. Se fijan frente a la limpieza automática. La fecha indica si viene del archivo,
+  de una fecha ISO indicada por MCP o del momento de subida. No añaden tiempo observado ni sesiones de
+  actividad. `screen_import` y `screen_import_list` completan las 14 herramientas MCP; el segundo pagina
+  por ID aunque las fechas coincidan. La importación se solicita expresamente; no vigila carpetas en continuo.
 - **Ajustes**: modo privado, búsqueda visual (interruptor, descarga del modelo, progreso del índice), captura activada, intervalo, sensibilidad al
   cambio, monitores, motor OCR (con la disponibilidad de cada uno), ancho de
   imagen, retención, límite de disco, exclusiones (añadir, quitar, activar y

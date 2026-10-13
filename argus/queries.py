@@ -36,6 +36,10 @@ def _frame_row(row, tz=None) -> dict:
         "height": row["height"],
         "ocr_status": row["ocr_status"],
         "ocr_ms": row["ocr_ms"],
+        "origin": row["origin"],
+        "source_path": row["source_path"],
+        "source_sha256": row["source_sha256"],
+        "time_basis": row["time_basis"],
     }
 
 
@@ -69,8 +73,11 @@ class Queries:
         cursor: float | None,
         ascending: bool = False,
         title: str | None = None,
+        capture_only: bool = False,
     ) -> dict:
         clauses, params = self._range_clause(start, end, app, title)
+        if capture_only:
+            clauses.append("f.origin = 'capture'")
         if cursor is not None:
             clauses.append("f.captured_at < ?" if not ascending else "f.captured_at > ?")
             params.append(cursor)
@@ -170,6 +177,7 @@ class Queries:
 
     def apps(self, start: float | None, end: float | None, titles_per_app: int = 5) -> dict:
         clauses, params = self._range_clause(start, end, None)
+        clauses.append("f.origin = 'capture'")
         where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
         with self.db.lock:
             totals = self.db.conn.execute(
@@ -197,6 +205,7 @@ class Queries:
     def sessions(self, day: str | None = None, start: float | None = None, end: float | None = None, app: str | None = None) -> list[dict]:
         """Consecutive frames of the same app + window, oldest first."""
         clauses, params = self._range_clause(start, end, app)
+        clauses.append("f.origin = 'capture'")
         if day:
             clauses.append("f.day = ?")
             params.append(day)
@@ -222,12 +231,24 @@ class Queries:
             if r["frames"] or r["hidden"]
         ]
 
+    def imported(self, limit: int = 60, before: int | None = None) -> dict:
+        clauses, params = ["f.origin = 'import'"], []
+        if before is not None:
+            clauses.append("f.id < ?")
+            params.append(before)
+        with self.db.lock:
+            rows = self.db.conn.execute(
+                "SELECT f.*, (SELECT text FROM frames_fts t WHERE t.rowid = f.id) AS text FROM frames f WHERE "
+                + " AND ".join(clauses) + " ORDER BY f.id DESC LIMIT ?", [*params, limit + 1]).fetchall()
+        return {"frames": [{**_frame_row(r), "excerpt": _excerpt(r["text"])} for r in rows[:limit]],
+                "next_before": rows[limit - 1]["id"] if len(rows) > limit else None}
+
     def recent(self, since: float, limit: int) -> list[dict]:
         """Most recent OCR'd frames, most recent first, one per distinct text."""
         with self.db.lock:
             rows = self.db.conn.execute(
                 """SELECT f.*, t.text FROM frames f JOIN frames_fts t ON t.rowid = f.id
-                   WHERE f.until_at >= ? AND f.ocr_status = 'done' ORDER BY f.captured_at DESC LIMIT ?""",
+                   WHERE f.until_at >= ? AND f.ocr_status = 'done' AND f.origin = 'capture' ORDER BY f.captured_at DESC LIMIT ?""",
                 (since, limit * 4),
             ).fetchall()
         seen: set[str] = set()

@@ -7,10 +7,12 @@ import Timeline from "./pages/Timeline.jsx";
 import Buscar from "./pages/Buscar.jsx";
 import Actividad from "./pages/Actividad.jsx";
 import Ajustes from "./pages/Ajustes.jsx";
+import Importar from "./pages/Importar.jsx";
 
 const PAGES = [
   { path: "linea", label: "Línea de tiempo", icon: "M3 12h18M7 12v-4m5 4v-7m5 7v-2M3 17h18", component: Timeline },
   { path: "buscar", label: "Buscar", icon: "M11 4a7 7 0 100 14 7 7 0 000-14zM20 20l-4-4", component: Buscar },
+  { path: "importar", label: "Importar capturas", icon: "M12 3v12m-4-4 4 4 4-4M4 17v4h16v-4", component: Importar },
   { path: "actividad", label: "Actividad", icon: "M4 20V10m5 10V4m5 16v-8m5 8V7", component: Actividad },
   { path: "ajustes", label: "Ajustes", icon: "M12 8a4 4 0 100 8 4 4 0 000-8zM4 12h2m12 0h2M12 4v2m0 12v2", component: Ajustes },
 ];

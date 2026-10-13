@@ -2,6 +2,18 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { addRefreshHandler, buildContext, installCopilot, onTurnEnd, parseRoute, readViewStates, setViewState } from "./src/copilot-context.js";
 
+test('import view preserves unsaved paths and identifies source records without OCR content', async () => {
+  const context = await buildContext({hash:'#/importar', states:{'screenshot-import':{
+    paths:['D:/archive'], recursive:true, imported_ids:[7]}},
+    getFrame:async () => ({id:7,window_title:'receipt.png',origin:'import',time_basis:'file_mtime',
+      source_path:'D:/archive/receipt.png',pinned:true,text:'OCR CONTENT SHOULD NOT ENTER CONTEXT'})});
+  assert.equal(context.view.page,'screenshot-import');
+  assert.deepEqual(context.view.editor.fields,{paths:['D:/archive'],recursive:true});
+  assert.equal(context.active_objects[0].origin,'import');
+  assert.equal(context.active_objects[0].source_path,'D:/archive/receipt.png');
+  assert.equal('text' in context.active_objects[0],false);
+});
+
 const frame = { id: 41, window_title: "Quarterly report - Editor", app: "code", captured_at: "2026-10-12T09:15:00", duration_s: 30, ocr_status: "done", monitor: 1, pinned: true, text: "SECRET OCR TEXT" };
 const days = { days: [{ day: "2026-10-12", frames: 12, hidden: 2, seconds: 600 }] };
 const settings = { enabled: true, private: false, interval_s: 5, capture_scope: "active", ocr_backend: "auto", retention_days: 30, storage_cap_mb: 2000, visual_search: false };

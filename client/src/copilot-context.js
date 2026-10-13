@@ -3,7 +3,7 @@
 // finishes a turn. Nothing here renders anything. Recognised screen text is never sent: the assistant reads it with its own tools.
 import { api } from "./api.js";
 
-const PAGE_NAMES = { linea: "timeline", buscar: "search", actividad: "activity", ajustes: "settings" };
+const PAGE_NAMES = { linea: "timeline", buscar: "search", importar: "screenshot-import", actividad: "activity", ajustes: "settings" };
 const MAX_HITS = 5;
 const MAX_RULES = 12;
 
@@ -32,7 +32,7 @@ export const frameObject = (f) => ({
   kind: "frame",
   object_id: String(f.id),
   title: f.window_title || "(sin titulo)",
-  ...pick(f, ["app", "captured_at", "duration_s", "ocr_status", "monitor"]),
+  ...pick(f, ["app", "captured_at", "duration_s", "ocr_status", "monitor", "origin", "time_basis", "source_path"]),
   ...(f.pinned ? { pinned: true } : {}),
 });
 
@@ -105,6 +105,15 @@ export async function buildContext({ hash, states = {}, getFrame, getDays, getSe
     }
     if (s?.draft && (s.draft.q || s.draft.from || s.draft.to || s.draft.app)) {
       view.editor = { kind: "search-form", dirty: true, fields: pick(s.draft, ["q", "mode", "from", "to", "app"]) };
+    }
+  } else if (route.page === "screenshot-import") {
+    const imported = states["screenshot-import"];
+    if (imported?.paths?.length) {
+      view.editor = { kind: "screenshot-import-form", dirty: true, fields: { paths: imported.paths, recursive: imported.recursive } };
+    }
+    for (const id of (imported?.imported_ids || []).slice(0, MAX_HITS)) {
+      const frame = await safe(() => getFrame(id));
+      if (frame?.id) add(frameObject(frame));
     }
   } else if (route.page === "activity") {
     const a = states.activity;

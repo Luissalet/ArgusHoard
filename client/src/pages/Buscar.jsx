@@ -59,7 +59,7 @@ function Moment({ hit, openFrame, onSimilar }) {
             <span className="help">{hit.app || "app desconocida"}</span>
           </div>
           <div className="help num">
-            {momentTime(hit)} · {hit.count === 1 ? "1 pantalla" : `${hit.count} pantallas`} · {fmtDuration(hit.duration_s)} en pantalla
+            {momentTime(hit)} · {hit.count === 1 ? "1 pantalla" : `${hit.count} pantallas`} · {hit.origin === "import" ? "Archivo importado" : `${fmtDuration(hit.duration_s)} en pantalla`}
           </div>
           <Snippet text={hit.snippet} />
           <Via hit={hit} />
