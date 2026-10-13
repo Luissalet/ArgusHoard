@@ -128,7 +128,7 @@ export default function FrameViewer({ frameId, onClose, onNavigate }) {
               </div>
             </div>
             <aside className="flex min-h-0 flex-col border-t md:border-l md:border-t-0" style={{ borderColor: "var(--line)" }}>
-              <div className="flex items-center gap-2 px-4 py-2" style={{ borderBottom: "1px solid var(--line)" }}>
+              <div className="flex flex-wrap items-center gap-2 px-4 py-2" style={{ borderBottom: "1px solid var(--line)" }}>
                 <span className="whitespace-nowrap text-[12px] font-semibold">Texto OCR</span>
                 <span className="help whitespace-nowrap">({frame.blocks?.length || 0} bloques{frame.ocr_ms ? `, ${frame.ocr_ms} ms` : ""})</span>
                 <span className="flex-1" />
