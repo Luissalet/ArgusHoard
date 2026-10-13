@@ -16,6 +16,7 @@ from .visual import VisualUnavailable
 
 AGENT_INSTRUCTIONS = """Argus's Hoard is the user's own screen history: periodic screenshots of their PC, OCR'd and searchable, stored only on their machine.
 screen_import adds existing screenshot files/folders to the same searchable library; screen_import_list lists them. Imported frames have origin=import, explicit file provenance and time_basis; they are pinned and do not imply observed application activity. screen_recent, screen_timeline and screen_activity describe observed captures only. Search and screen_frame_text cover both.
+screen_import_watch selects folders for ongoing import (empty list stops without removing history); screen_import_watch_status reads configuration and the latest check. Files unchanged across two checks enter the same library. Private mode pauses folder observation. Missing folders retry; use screen_import_list to inspect retained results.
 Quote OCR text as OCR text: it may contain recognition errors, and a window title is what the app reported, not a fact you verified.
 Never speculate beyond what the frames show; if a frame lacks text (ocr_status != done) say so instead of guessing.
 screen_search also finds screens by how they looked (mode visual or both, the default): describe the scene ("la gráfica azul", "código en fondo oscuro", "a blue bar chart"). A visual hit has via ["visual"] and a visual_score (cosine, about 0.2-0.35 for a real match); it exists only once the image index is built (screen_status, visual), otherwise the search is text only. screen_similar finds screens that look like a given frame.
@@ -263,6 +264,7 @@ def run_delete_range(services: Services, args: DeleteRangeArgs) -> dict:
 
 
 from .imports import ScreenImportArgs, ScreenImportListArgs, import_paths
+from .import_watch import ImportWatchArgs
 
 
 def run_import(services: Services, args: ScreenImportArgs) -> dict:
@@ -271,6 +273,14 @@ def run_import(services: Services, args: ScreenImportArgs) -> dict:
 
 def run_import_list(services: Services, args: ScreenImportListArgs) -> dict:
     return services.queries.imported(args.limit, args.before)
+
+
+def run_import_watch(services: Services, args: ImportWatchArgs) -> dict:
+    return services.import_watch.configure(args)
+
+
+def run_import_watch_status(services: Services, _: Empty) -> dict:
+    return services.import_watch.status()
 
 
 TOOLS: list[Tool] = [
@@ -288,6 +298,8 @@ TOOLS: list[Tool] = [
     Tool("screen_delete_range", "Permanently delete frames between two times (only when asked; no undo). Keywords: borrar, eliminar capturas.\nPermanently delete every frame (images and text) between two times. Only when the user explicitly asks; there is no undo.\nSinónimos: borrar, eliminar, olvidar, borra lo de ayer, borra esta tarde, privacidad, pantalla.", DeleteRangeArgs, ann(False, True, True), run_delete_range),
     Tool("screen_import", "Import existing screenshots or folders for local OCR. Importar capturas guardadas.\nOriginal files remain unchanged; repeats reuse existing frames. Imports are pinned and do not imply observed screen activity. Sinónimos: importar imágenes, carpeta, archivo, capturas. Keywords: screenshots, folder, OCR, archive.", ScreenImportArgs, ann(False, False, False), run_import),
     Tool("screen_import_list", "List imported screenshots with source and OCR status. Listar capturas importadas.\nUse next_before to continue, then screen_frame_text to read OCR. Sinónimos: imágenes importadas, archivo, biblioteca de capturas. Keywords: imported files, screenshots, image library.", ScreenImportListArgs, ann(True), run_import_list),
+    Tool("screen_import_watch", "Observe screenshot folders. Keywords: carpetas de capturas, importación automática.\nReplace folders, set recursion or check now; [] stops without deleting history. Files unchanged over two observations enter the existing OCR library; repeated source/SHA is deduplicated. Missing folders retry; private mode pauses observation. Sinónimos: observar carpeta, importar nuevas capturas, subcarpetas.", ImportWatchArgs, ann(False, False, True), run_import_watch),
+    Tool("screen_import_watch_status", "Screenshot folder observation status. Keywords: carpetas, estado de importación, errores OCR.\nRead selected folders and the latest result without importing or changing settings. last_scan is the most recent check, not a cumulative total. Sinónimos: estado carpetas, importadas, esperando estabilidad.", Empty, ann(True), run_import_watch_status),
 ]
 
 TOOLS_BY_NAME = {tool.name: tool for tool in TOOLS}

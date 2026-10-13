@@ -123,6 +123,7 @@ def test_agent_tools_and_call_auth(client):
         "screen_status", "screen_search", "screen_similar", "screen_timeline", "screen_frame_text", "screen_pin_frame", "screen_recent",
         "screen_activity", "screen_days", "screen_pause", "screen_resume", "screen_delete_range",
         "screen_import", "screen_import_list",
+        "screen_import_watch", "screen_import_watch_status",
     ]
     assert all("Sinónimos:" in t["description"] for t in catalog["tools"])
     assert catalog["tools"][1]["inputSchema"]["properties"]["from"]

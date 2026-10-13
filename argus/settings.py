@@ -27,6 +27,8 @@ class Settings(BaseModel):
     thumb_max_width: int = Field(320, ge=64, le=1024)
     capture_scope: CaptureScope = "active"
     visual_search: bool = True  # index the stored frames with the CPU image model and allow searching by how they look (needs the model files)
+    import_watch_folders: list[str] = Field(default_factory=list)
+    import_watch_recursive: bool = False
 
 
 class SettingsPatch(BaseModel):
@@ -45,6 +47,8 @@ class SettingsPatch(BaseModel):
     thumb_max_width: int | None = Field(None, ge=64, le=1024)
     capture_scope: CaptureScope | None = None
     visual_search: bool | None = None
+    import_watch_folders: list[str] | None = None
+    import_watch_recursive: bool | None = None
 
 
 class SettingsStore:

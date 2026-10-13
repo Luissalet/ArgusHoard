@@ -3,7 +3,7 @@
   "id": "argus",
   "name": "Argus's Hoard",
   "purpose": "Private screen memory: periodic screenshots of the user's own PC, OCR'd and searchable by text, app, window and time, stored only on the machine.",
-  "capabilities": ["screen-history", "screenshot-import", "imported-screenshots", "ocr", "timeline", "full-text-search", "visual-search", "similar-frames", "activity-by-app", "recent-screen", "pause", "private-mode", "exclusions", "retention", "delete-range"],
+  "capabilities": ["screen-history", "screenshot-import", "screenshot-folder-watch", "imported-screenshots", "ocr", "timeline", "full-text-search", "visual-search", "similar-frames", "activity-by-app", "recent-screen", "pause", "private-mode", "exclusions", "retention", "delete-range"],
   "placeholders": ["ARGUS_DIR", "APP_URL", "TOKEN_FILE", "PYTHON"],
   "defaults": {
     "APP_URL": "http://127.0.0.1:5183",

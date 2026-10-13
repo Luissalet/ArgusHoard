@@ -198,7 +198,7 @@ uno int8 reduce el tamaño a la mitad y ordena claramente peor.
   la resolución y la procedencia; reconoce repetidos por ruta + SHA-256 y guarda una nueva captura cuando
   cambia el contenido. Se fijan frente a la limpieza automática. La fecha indica si viene del archivo,
   de una fecha ISO indicada por MCP o del momento de subida. No añaden tiempo observado ni sesiones de
-  actividad. `screen_import` y `screen_import_list` completan las 14 herramientas MCP; el segundo pagina
+  actividad. `screen_import` y `screen_import_list` forman parte de las 16 herramientas MCP; el segundo pagina
   por ID aunque las fechas coincidan. La importación se solicita expresamente; no vigila carpetas en continuo.
 - **Ajustes**: modo privado, búsqueda visual (interruptor, descarga del modelo, progreso del índice), captura activada, intervalo, sensibilidad al
   cambio, monitores, motor OCR (con la disponibilidad de cada uno), ancho de
@@ -321,3 +321,7 @@ backends exclusivos de Windows (captura con `mss`, ventana activa con `ctypes`,
 ## Licencia
 
 MIT — ved `LICENSE`.
+
+### Carpetas automáticas
+
+En Importar capturas se guardan carpetas, una por línea, con subcarpetas opcionales. Las imágenes nuevas o modificadas se importan cuando fecha y tamaño permanecen iguales en dos comprobaciones, cada cinco segundos. Se reutiliza el OCR/búsqueda y el mismo source/SHA no se duplica. Al reiniciar conserva carpetas; si desaparecen, reintenta sin borrar el historial. El modo privado detiene la observación. Guardar la lista vacía la detiene y mantiene las capturas. screen_import_watch y screen_import_watch_status usan las mismas rutas GET/POST /api/imports/watch: 16 herramientas MCP. Los contadores son de la última comprobación. La estabilidad observada no congela archivos que se reescriben entre comprobaciones; se guarda el SHA de los bytes realmente importados. Sin indexador o CLI externo.

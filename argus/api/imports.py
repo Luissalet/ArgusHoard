@@ -6,6 +6,7 @@ import time
 from fastapi import APIRouter, File, Form, Query, Request, UploadFile
 
 from ..imports import ScreenImportArgs, _timestamp, import_image, import_paths
+from ..import_watch import ImportWatchArgs
 from ..hoard_link.agentkit import AppError
 from .deps import services
 
@@ -44,3 +45,13 @@ def upload(request: Request, files: list[UploadFile] = File(...), modified: str 
             file.file.close()
     return {"frames": results, "imported": sum(not x["duplicate"] for x in results),
             "duplicates": sum(x["duplicate"] for x in results), "errors": errors, "queue_depth": svc.ocr.depth}
+
+
+@router.get("/watch")
+def watch_status(request: Request):
+    return services(request).import_watch.status()
+
+
+@router.post("/watch")
+def watch_update(request: Request, body: ImportWatchArgs):
+    return services(request).import_watch.configure(body)

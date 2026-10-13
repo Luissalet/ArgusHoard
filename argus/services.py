@@ -12,6 +12,7 @@ from .config import Config
 from .db import Database
 from .hoard_link.tokens import read_or_create_token
 from .janitor import Janitor
+from .import_watch import ImportWatch
 from .ocr import ocr_availability
 from .queries import Queries
 from .recorder import Recorder
@@ -44,11 +45,13 @@ class Services:
         self.visual = VisualService(config, self.db, self.frames, self.queries, self.settings, busy=lambda: self.ocr.depth)
         self.janitor = Janitor(self.frames, self.settings)
         self.recorder = Recorder(self.backends, self.settings, self.frames, self.exclusions, self.ocr, on_idle=self.janitor.run)
+        self.import_watch = ImportWatch(self)
 
     # ---------- lifecycle ----------
     def start(self) -> None:
         self.ocr.start()
         self.visual.start()
+        self.import_watch.start()
         if self.config.autostart:
             self.recorder.start()
         try:
@@ -57,6 +60,7 @@ class Services:
             log.warning("initial housekeeping failed: %s", error)
 
     def stop(self) -> None:
+        self.import_watch.stop()
         self.recorder.stop()
         self.visual.stop()
         self.ocr.stop()
@@ -68,6 +72,7 @@ class Services:
         self.ocr.reconfigure(merged.ocr_backend, merged.ocr_language)
         self.visual.on_settings_changed()
         self.recorder.wake()
+        self.import_watch.wake()
         return merged
 
     # ---------- search ----------

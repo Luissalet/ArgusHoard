@@ -268,6 +268,14 @@ proxies every call to `POST /api/agent/call` with the token from
 | `screen_delete_range` | permanent deletion of a range (destructive) |
 | `screen_import` | import existing image files/folders, report duplicates and per-file errors |
 | `screen_import_list` | list imported frames, their source, OCR state and next page |
+| `screen_import_watch` | select folders for continuous import, include subfolders or check now; an empty list stops observation |
+| `screen_import_watch_status` | selected folders and latest check, including files waiting for stability and partial errors |
+
+### Automatically import screenshot folders
+
+In **Import screenshots → Automatic folders**, save one folder per line and optionally include subfolders. New or modified PNG, JPEG, still WebP and BMP files enter the same OCR/search library when their modification time and size stay unchanged across two checks, normally five seconds apart. Repeated source/SHA pairs reuse the retained frame. Folder settings persist across restarts; missing folders retry and disappearing files do not remove their imported history. Private mode pauses observation. Save an empty folder list to stop it.
+
+`screen_import_watch` and `screen_import_watch_status` are native API/MCP tools (16 total). `GET/POST /api/imports/watch` drives the ordinary page as well. The latest-check counters describe that check, not lifetime totals. Polling stability does not guarantee an atomic snapshot of a file being rewritten between checks; actual imported bytes retain their own SHA. The app's own data folder remains excluded by the existing import rule. No external screenshot indexer or application is required.
 
 Connect it from Faustus with `faustus-plugin.json`, or by hand:
 `{PYTHON} mcp_server.py` with env `ARGUS_URL=http://127.0.0.1:5183` and

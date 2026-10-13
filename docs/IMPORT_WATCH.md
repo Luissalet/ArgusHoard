@@ -1,0 +1,9 @@
+# Automatic screenshot folders
+
+`GET /api/imports/watch` reads persisted folders, recursion, state, interval_s and last_scan. `POST` accepts optional folders (replace, [] stops), recursive and scan (check now). Native tools screen_import_watch and screen_import_watch_status share the same service. Missing fields preserve settings; no new capture backend or external process.
+
+The service observes folders every five seconds, tracking path, modification nanoseconds and size. A changed signature waits until the next identical observation; decoded images use existing source/SHA deduplication, full-resolution imports, pinning and OCR queue. A replaced original adds its version rather than replacing history. Removed files and removed watched folders leave imported frames intact. Missing folders and partial/corrupt images return errors and retry. Overlapping folders are collapsed by resolved source path. Existing import exclusion of app data applies, including resolved links. Private mode pauses observation; screen recording pause alone does not stop chosen folder imports.
+
+The observer joins before the OCR worker/database close. Manual and background checks serialize their cache state. Persisted folder settings survive restarts; the in-memory observation cache does not, so the first two scans re-check existing files against their SHA in the database. Unchanged files after those scans require no repeated image read or OCR. This is polling stability, not an atomic filesystem snapshot; changing an original between checks can still yield its current valid bytes. No guarantee of files edited in place while preserving both size and modification time.
+
+The page preserves pending folder text during refresh, exposes recursion/save/check-now and the last scan, and supplies actual and pending folders to the common copilot. Empty configuration keeps pre-existing capture behavior. No folders of real users are enabled for QA.
