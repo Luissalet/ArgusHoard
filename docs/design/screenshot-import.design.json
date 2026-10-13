@@ -1,0 +1,402 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-13T08:18:51.737Z",
+  "title": "Design System: Argus's Hoard — capturas importadas",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "accent",
+        "tonalRamp": [
+          "oklch(15.00% 0.1616 285.67)",
+          "oklch(26.43% 0.1616 285.67)",
+          "oklch(37.86% 0.1616 285.67)",
+          "oklch(49.29% 0.1616 285.67)",
+          "oklch(60.71% 0.1616 285.67)",
+          "oklch(72.14% 0.1616 285.67)",
+          "oklch(83.57% 0.1616 285.67)",
+          "oklch(95.00% 0.1616 285.67)"
+        ]
+      },
+      "accent-strong": {
+        "role": "primary",
+        "displayName": "accent-strong",
+        "tonalRamp": [
+          "oklch(15.00% 0.1105 288.21)",
+          "oklch(26.43% 0.1105 288.21)",
+          "oklch(37.86% 0.1105 288.21)",
+          "oklch(49.29% 0.1105 288.21)",
+          "oklch(60.71% 0.1105 288.21)",
+          "oklch(72.14% 0.1105 288.21)",
+          "oklch(83.57% 0.1105 288.21)",
+          "oklch(95.00% 0.1105 288.21)"
+        ]
+      },
+      "accent-ink": {
+        "role": "primary",
+        "displayName": "accent-ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.0161 284.77)",
+          "oklch(26.43% 0.0161 284.77)",
+          "oklch(37.86% 0.0161 284.77)",
+          "oklch(49.29% 0.0161 284.77)",
+          "oklch(60.71% 0.0161 284.77)",
+          "oklch(72.14% 0.0161 284.77)",
+          "oklch(83.57% 0.0161 284.77)",
+          "oklch(95.00% 0.0161 284.77)"
+        ]
+      },
+      "deep": {
+        "role": "neutral",
+        "displayName": "deep",
+        "tonalRamp": [
+          "oklch(15.00% 0.0180 284.61)",
+          "oklch(26.43% 0.0180 284.61)",
+          "oklch(37.86% 0.0180 284.61)",
+          "oklch(49.29% 0.0180 284.61)",
+          "oklch(60.71% 0.0180 284.61)",
+          "oklch(72.14% 0.0180 284.61)",
+          "oklch(83.57% 0.0180 284.61)",
+          "oklch(95.00% 0.0180 284.61)"
+        ]
+      },
+      "sunken": {
+        "role": "neutral",
+        "displayName": "sunken",
+        "tonalRamp": [
+          "oklch(15.00% 0.0165 290.30)",
+          "oklch(26.43% 0.0165 290.30)",
+          "oklch(37.86% 0.0165 290.30)",
+          "oklch(49.29% 0.0165 290.30)",
+          "oklch(60.71% 0.0165 290.30)",
+          "oklch(72.14% 0.0165 290.30)",
+          "oklch(83.57% 0.0165 290.30)",
+          "oklch(95.00% 0.0165 290.30)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "surface",
+        "tonalRamp": [
+          "oklch(15.00% 0.0213 288.72)",
+          "oklch(26.43% 0.0213 288.72)",
+          "oklch(37.86% 0.0213 288.72)",
+          "oklch(49.29% 0.0213 288.72)",
+          "oklch(60.71% 0.0213 288.72)",
+          "oklch(72.14% 0.0213 288.72)",
+          "oklch(83.57% 0.0213 288.72)",
+          "oklch(95.00% 0.0213 288.72)"
+        ]
+      },
+      "elevated": {
+        "role": "neutral",
+        "displayName": "elevated",
+        "tonalRamp": [
+          "oklch(15.00% 0.0240 288.18)",
+          "oklch(26.43% 0.0240 288.18)",
+          "oklch(37.86% 0.0240 288.18)",
+          "oklch(49.29% 0.0240 288.18)",
+          "oklch(60.71% 0.0240 288.18)",
+          "oklch(72.14% 0.0240 288.18)",
+          "oklch(83.57% 0.0240 288.18)",
+          "oklch(95.00% 0.0240 288.18)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "border",
+        "tonalRamp": [
+          "oklch(15.00% 0.0280 287.64)",
+          "oklch(26.43% 0.0280 287.64)",
+          "oklch(37.86% 0.0280 287.64)",
+          "oklch(49.29% 0.0280 287.64)",
+          "oklch(60.71% 0.0280 287.64)",
+          "oklch(72.14% 0.0280 287.64)",
+          "oklch(83.57% 0.0280 287.64)",
+          "oklch(95.00% 0.0280 287.64)"
+        ]
+      },
+      "border-hover": {
+        "role": "neutral",
+        "displayName": "border-hover",
+        "tonalRamp": [
+          "oklch(15.00% 0.0355 289.10)",
+          "oklch(26.43% 0.0355 289.10)",
+          "oklch(37.86% 0.0355 289.10)",
+          "oklch(49.29% 0.0355 289.10)",
+          "oklch(60.71% 0.0355 289.10)",
+          "oklch(72.14% 0.0355 289.10)",
+          "oklch(83.57% 0.0355 289.10)",
+          "oklch(95.00% 0.0355 289.10)"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "text",
+        "tonalRamp": [
+          "oklch(15.00% 0.0149 290.29)",
+          "oklch(26.43% 0.0149 290.29)",
+          "oklch(37.86% 0.0149 290.29)",
+          "oklch(49.29% 0.0149 290.29)",
+          "oklch(60.71% 0.0149 290.29)",
+          "oklch(72.14% 0.0149 290.29)",
+          "oklch(83.57% 0.0149 290.29)",
+          "oklch(95.00% 0.0149 290.29)"
+        ]
+      },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "text-muted",
+        "tonalRamp": [
+          "oklch(15.00% 0.0141 290.67)",
+          "oklch(26.43% 0.0141 290.67)",
+          "oklch(37.86% 0.0141 290.67)",
+          "oklch(49.29% 0.0141 290.67)",
+          "oklch(60.71% 0.0141 290.67)",
+          "oklch(72.14% 0.0141 290.67)",
+          "oklch(83.57% 0.0141 290.67)",
+          "oklch(95.00% 0.0141 290.67)"
+        ]
+      },
+      "text-dim": {
+        "role": "neutral",
+        "displayName": "text-dim",
+        "tonalRamp": [
+          "oklch(15.00% 0.0159 290.16)",
+          "oklch(26.43% 0.0159 290.16)",
+          "oklch(37.86% 0.0159 290.16)",
+          "oklch(49.29% 0.0159 290.16)",
+          "oklch(60.71% 0.0159 290.16)",
+          "oklch(72.14% 0.0159 290.16)",
+          "oklch(83.57% 0.0159 290.16)",
+          "oklch(95.00% 0.0159 290.16)"
+        ]
+      },
+      "warning-bg": {
+        "role": "state",
+        "displayName": "warning-bg",
+        "tonalRamp": [
+          "oklch(15.00% 0.1274 84.93)",
+          "oklch(26.43% 0.1274 84.93)",
+          "oklch(37.86% 0.1274 84.93)",
+          "oklch(49.29% 0.1274 84.93)",
+          "oklch(60.71% 0.1274 84.93)",
+          "oklch(72.14% 0.1274 84.93)",
+          "oklch(83.57% 0.1274 84.93)",
+          "oklch(95.00% 0.1274 84.93)"
+        ]
+      },
+      "warning-ink": {
+        "role": "state",
+        "displayName": "warning-ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.1161 87.09)",
+          "oklch(26.43% 0.1161 87.09)",
+          "oklch(37.86% 0.1161 87.09)",
+          "oklch(49.29% 0.1161 87.09)",
+          "oklch(60.71% 0.1161 87.09)",
+          "oklch(72.14% 0.1161 87.09)",
+          "oklch(83.57% 0.1161 87.09)",
+          "oklch(95.00% 0.1161 87.09)"
+        ]
+      },
+      "danger-bg": {
+        "role": "state",
+        "displayName": "danger-bg",
+        "tonalRamp": [
+          "oklch(15.00% 0.1634 28.69)",
+          "oklch(26.43% 0.1634 28.69)",
+          "oklch(37.86% 0.1634 28.69)",
+          "oklch(49.29% 0.1634 28.69)",
+          "oklch(60.71% 0.1634 28.69)",
+          "oklch(72.14% 0.1634 28.69)",
+          "oklch(83.57% 0.1634 28.69)",
+          "oklch(95.00% 0.1634 28.69)"
+        ]
+      },
+      "danger-ink": {
+        "role": "state",
+        "displayName": "danger-ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.1226 27.14)",
+          "oklch(26.43% 0.1226 27.14)",
+          "oklch(37.86% 0.1226 27.14)",
+          "oklch(49.29% 0.1226 27.14)",
+          "oklch(60.71% 0.1226 27.14)",
+          "oklch(72.14% 0.1226 27.14)",
+          "oklch(83.57% 0.1226 27.14)",
+          "oklch(95.00% 0.1226 27.14)"
+        ]
+      },
+      "highlight": {
+        "role": "state",
+        "displayName": "highlight",
+        "tonalRamp": [
+          "oklch(15.00% 0.1274 84.93)",
+          "oklch(26.43% 0.1274 84.93)",
+          "oklch(37.86% 0.1274 84.93)",
+          "oklch(49.29% 0.1274 84.93)",
+          "oklch(60.71% 0.1274 84.93)",
+          "oklch(72.14% 0.1274 84.93)",
+          "oklch(83.57% 0.1274 84.93)",
+          "oklch(95.00% 0.1274 84.93)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Título serif",
+        "purpose": "Cabecera de página existente."
+      },
+      "body": {
+        "displayName": "Texto sans",
+        "purpose": "Formulario, biblioteca y OCR del visor."
+      }
+    },
+    "shadows": [
+      {
+        "name": "hoard-shadow",
+        "value": "0 8px 28px rgba(0, 0, 0, 0.38)",
+        "purpose": "Diálogo y aviso flotante existentes."
+      }
+    ],
+    "motion": [
+      {
+        "name": "control-transition",
+        "value": "0.16s",
+        "purpose": "Cambio de color y fondo de controles; movimiento reducido desactiva transiciones."
+      },
+      {
+        "name": "watching-pulse",
+        "value": "2.4s ease-in-out infinite",
+        "purpose": "Punto de captura activa existente; movimiento reducido desactiva la animación."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botón principal",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Control existente con estados hover, foco y deshabilitado.",
+      "html": "<button type=\"button\" class=\"ds-button-primary\">Buscar</button>",
+      "css": ".ds-button-primary{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:8px 15px;border:1px solid var(--hoard-accent, #8f84f4);border-radius:var(--hoard-radius, 8px);background:var(--hoard-accent, #8f84f4);color:var(--hoard-accent-ink, #13131b);font-family:var(--hoard-font-sans, 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', 'Liberation Sans', Arial, sans-serif);font-size:13px;font-weight:600;line-height:18px;cursor:pointer;white-space:nowrap;transition:background .16s,color .16s}.ds-button-primary:hover{background:var(--hoard-accent-strong, #b1a9f7);border-color:var(--hoard-accent-strong, #b1a9f7)}.ds-button-primary:focus-visible{outline:2px solid var(--hoard-accent, #8f84f4);outline-offset:3px;}.ds-button-primary:disabled{opacity:.45;cursor:not-allowed}"
+    },
+    {
+      "name": "Botón secundario",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Control existente con estados hover, foco y deshabilitado.",
+      "html": "<button type=\"button\" class=\"ds-button-secondary\">Actualizar</button>",
+      "css": ".ds-button-secondary{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:8px 15px;border:1px solid var(--hoard-border, #353444);border-radius:var(--hoard-radius, 8px);background:var(--hoard-surface, #1b1a25);color:var(--hoard-text, #e2e1ec);font-family:var(--hoard-font-sans, 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', 'Liberation Sans', Arial, sans-serif);font-size:13px;font-weight:600;line-height:18px;cursor:pointer;white-space:nowrap;transition:background .16s,color .16s}.ds-button-secondary:hover{background:var(--hoard-elevated, #252431);border-color:var(--hoard-border-hover, #58566c)}.ds-button-secondary:focus-visible{outline:2px solid var(--hoard-accent, #8f84f4);outline-offset:3px;}.ds-button-secondary:disabled{opacity:.45;cursor:not-allowed}"
+    },
+    {
+      "name": "Botón destructivo",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Control existente con estados hover, foco y deshabilitado.",
+      "html": "<button type=\"button\" class=\"ds-button-danger\">Borrar</button>",
+      "css": ".ds-button-danger{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:8px 15px;border:1px solid rgba(196,70,58,.4);border-radius:var(--hoard-radius, 8px);background:rgba(196,70,58,.16);color:#ee8b80;font-family:var(--hoard-font-sans, 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', 'Liberation Sans', Arial, sans-serif);font-size:13px;font-weight:600;line-height:18px;cursor:pointer;white-space:nowrap;transition:background .16s,color .16s}.ds-button-danger:hover{background:var(--hoard-elevated, #252431);border-color:var(--hoard-border-hover, #58566c)}.ds-button-danger:focus-visible{outline:2px solid var(--hoard-accent, #8f84f4);outline-offset:3px;}.ds-button-danger:disabled{opacity:.45;cursor:not-allowed}"
+    },
+    {
+      "name": "Campo de rutas",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Etiqueta visible y texto editable; una ruta por línea.",
+      "html": "<label class=\"ds-route-label\">Archivos o carpetas por ruta, uno por línea<textarea class=\"ds-route-field\" rows=\"3\" spellcheck=\"false\"></textarea></label>",
+      "css": ".ds-route-label{display:block;color:var(--hoard-text, #e2e1ec);font-family:var(--hoard-font-sans, 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', 'Liberation Sans', Arial, sans-serif);font-size:12px;font-weight:600}.ds-route-field{display:block;margin-top:4px;width:100%;min-width:0;padding:8px 11px;border:1px solid var(--hoard-border, #353444);border-radius:var(--hoard-radius, 8px);background:var(--hoard-sunken, #100f17);color:var(--hoard-text, #e2e1ec);font-family:var(--hoard-font-sans, 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', 'Liberation Sans', Arial, sans-serif);font-size:13px;font-weight:400;line-height:1.5}.ds-route-field::placeholder{color:var(--hoard-text-dim, #9c9ba6)}.ds-route-field:focus{border-color:var(--hoard-accent, #8f84f4);outline:none}"
+    },
+    {
+      "name": "Navegación activa",
+      "kind": "nav",
+      "refersTo": "nav-active",
+      "description": "Icono violeta y sección activa mediante aria-current.",
+      "html": "<nav aria-label=\"Secciones\"><a class=\"ds-nav-link\" href=\"#/importar\" aria-current=\"page\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3v12m-4-4 4 4 4-4M4 17v4h16v-4\"/></svg>Importar capturas</a></nav>",
+      "css": ".ds-nav-link{display:flex;align-items:center;gap:10px;min-height:40px;padding:10px 13px;border-radius:var(--hoard-radius, 8px);font-family:var(--hoard-font-sans, 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', 'Liberation Sans', Arial, sans-serif);font-size:14px;font-weight:400;color:var(--hoard-text-muted, #b5b4be);text-decoration:none}.ds-nav-link:hover,.ds-nav-link[aria-current=\"page\"]{background:var(--hoard-elevated, #252431);color:var(--hoard-text, #e2e1ec)}.ds-nav-link[aria-current=\"page\"]{font-weight:500}.ds-nav-link[aria-current=\"page\"] svg{color:var(--hoard-accent, #8f84f4)}.ds-nav-link:focus-visible{outline:2px solid var(--hoard-accent, #8f84f4);outline-offset:3px;}"
+    },
+    {
+      "name": "Estado OCR pendiente",
+      "kind": "chip",
+      "refersTo": "chip-warning",
+      "description": "El estado se escribe; el ocre aporta énfasis.",
+      "html": "<span class=\"ds-ocr-chip\">OCR: pending</span>",
+      "css": ".ds-ocr-chip{display:inline-block;padding:2px 6px;border-radius:var(--hoard-radius-sm, 6px);background:rgba(212,168,67,.14);color:#e0bb62;font-family:var(--hoard-font-sans, 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', 'Liberation Sans', Arial, sans-serif);font-size:10px;font-weight:500;letter-spacing:.02em;white-space:nowrap}"
+    },
+    {
+      "name": "Tarjeta importada",
+      "kind": "card",
+      "refersTo": "frame-card",
+      "description": "Fragmento de metadatos de una tarjeta real; la miniatura original se sirve por API.",
+      "html": "<button type=\"button\" class=\"ds-frame-card\"><span class=\"ds-frame-title\">archivo-lima.png</span><span class=\"ds-frame-help\">2025-09-08 09:23 · Texto disponible</span><span class=\"ds-frame-help\">ARCHIVO LIMA FACTURA 1250</span></button>",
+      "css": ".ds-frame-card{display:block;width:100%;text-align:left;padding:8px;border:1px solid var(--hoard-border, #353444);border-radius:var(--hoard-radius-lg, 10px);background:var(--hoard-surface, #1b1a25);color:var(--hoard-text, #e2e1ec);font-family:var(--hoard-font-sans, 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', 'Liberation Sans', Arial, sans-serif);cursor:pointer}.ds-frame-card:hover{background:var(--hoard-elevated, #252431)}.ds-frame-card[aria-current=\"true\"]{border-color:var(--hoard-accent, #8f84f4);box-shadow:0 0 0 1px var(--hoard-accent, #8f84f4)}.ds-frame-card:focus-visible{outline:2px solid var(--hoard-accent, #8f84f4);outline-offset:3px;}.ds-frame-title{display:block;padding:12px 12px 0;font-size:14px;font-weight:600;overflow-wrap:break-word}.ds-frame-help{display:block;padding:0 12px;color:var(--hoard-text-muted, #b5b4be);font-size:12px;line-height:1.65;overflow-wrap:break-word}.ds-frame-help:last-child{padding-bottom:12px}"
+    },
+    {
+      "name": "Cabecera OCR",
+      "kind": "custom",
+      "refersTo": "ocr-header",
+      "description": "Título y contador legibles; acciones con ajuste de fila dentro del visor.",
+      "html": "<div class=\"ds-ocr-header\"><span class=\"ds-ocr-title\">Texto OCR</span><span class=\"ds-ocr-count\">(4 bloques, 26 ms)</span><span class=\"ds-ocr-space\"></span><button type=\"button\" class=\"ds-ocr-link\">Ver cajas</button><button type=\"button\" class=\"ds-ocr-link\">Copiar</button></div>",
+      "css": ".ds-ocr-header{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(--hoard-border, #353444);background:var(--hoard-surface, #1b1a25);color:var(--hoard-text, #e2e1ec);font-family:var(--hoard-font-sans, 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', 'Liberation Sans', Arial, sans-serif)}.ds-ocr-title{font-size:12px;font-weight:600;white-space:nowrap;background:transparent}.ds-ocr-count{font-size:12px;color:var(--hoard-text-muted, #b5b4be);white-space:nowrap}.ds-ocr-space{flex:1}.ds-ocr-link{padding:0;border:0;background:none;color:var(--hoard-accent, #8f84f4);font-family:var(--hoard-font-sans, 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', 'Liberation Sans', Arial, sans-serif);font-size:12px;cursor:pointer;white-space:nowrap}.ds-ocr-link:hover{text-decoration:underline}.ds-ocr-link:focus-visible{outline:2px solid var(--hoard-accent, #8f84f4);outline-offset:3px;}"
+    },
+    {
+      "name": "Procedencia importada",
+      "kind": "custom",
+      "refersTo": "provenance",
+      "description": "Metadatos reales de la muestra QA, sin duración observada.",
+      "html": "<div class=\"ds-provenance\">Archivo importado · fecha del archivo: 2025-09-08 09:23</div>",
+      "css": ".ds-provenance{color:var(--hoard-text-muted, #b5b4be);font-family:var(--hoard-font-sans, 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', 'Liberation Sans', Arial, sans-serif);font-size:12px;line-height:1.65}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Memoria a la vista",
+    "overview": "La interfaz existente usa superficies oscuras violetas, títulos serif y controles sans. Las imágenes y el texto reconocido llevan el contenido; el acento señala acciones y selección. Esta nota describe ese código y su entrega aprobada, sin proponer una identidad nueva.",
+    "keyCharacteristics": [
+      "Original reconocible y OCR seleccionable.",
+      "Procedencia y base de fecha explícitas.",
+      "Estado de captura visible en todas las páginas.",
+      "Controles del detalle que se ajustan al ancho disponible."
+    ],
+    "rules": [
+      {
+        "name": "Estado escrito",
+        "body": "Cada estado se comunica con texto; el color solo lo refuerza.",
+        "section": "colors"
+      },
+      {
+        "name": "Procedencia",
+        "body": "Una imagen importada se etiqueta «Archivo importado» y nunca se presenta como tiempo observado en pantalla.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do conservar el aviso de estado y todas las funciones anteriores.",
+      "Do mostrar origen, base de fecha y estado OCR con texto.",
+      "Do conservar originales y OCR seleccionable.",
+      "Do limitar las reglas de marca a la navegación y permitir ajuste de acciones y OCR."
+    ],
+    "donts": [
+      "Don't atribuir duración observada a un archivo importado.",
+      "Don't convertir la importación puntual en una promesa de vigilancia de carpetas.",
+      "Don't recuperar los tokens claros antiguos como autoridad de esta superficie.",
+      "Don't presentar pruebas del autor como una ejecución MCP independiente del revisor."
+    ]
+  }
+}
