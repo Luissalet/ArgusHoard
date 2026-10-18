@@ -39,7 +39,7 @@
     "health": {
       "path": "/api/health",
       "expect": {
-        "service": "argus-hoard"
+        "service": "absorbed-argus"
       }
     },
     "identify": {
@@ -66,7 +66,7 @@
       "TALOS_DATA_DIR"
     ]
   },
-  "notes": "Absorbed by Talos's Hoard: https://github.com/Luissalet/TalosHoard. Launch the merged app explicitly; this identity only preserves existing family calls and data. Keep the app running (python -m argus) while the assistant uses it: the MCP bridge proxies every call to the local server and never opens the database. OCR text may contain recognition errors; the assistant should quote it as such.",
+  "notes": "Absorbed by Talos's Hoard: https://github.com/Luissalet/TalosHoard. Compatibility identity only. Start the merged app explicitly and enable its module there. This entry preserves family calls, tokens and existing data; it never owns or stops the merged process.",
   "x-family": {
     "copilot": {
       "provider": "faustus",
