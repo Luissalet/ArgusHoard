@@ -1,37 +1,94 @@
 {
   "schema": 1,
   "id": "argus",
-  "name": "Argus's Hoard",
-  "purpose": "Private screen memory: periodic screenshots of the user's own PC, OCR'd and searchable by text, app, window and time, stored only on the machine.",
-  "capabilities": ["screen-history", "screenshot-import", "screenshot-folder-watch", "imported-screenshots", "ocr", "timeline", "full-text-search", "visual-search", "similar-frames", "activity-by-app", "recent-screen", "pause", "private-mode", "exclusions", "retention", "delete-range"],
-  "placeholders": ["ARGUS_DIR", "APP_URL", "TOKEN_FILE", "PYTHON"],
+  "name": "Argus's Hoard · Talos",
+  "purpose": "Absorbed by Talos's Hoard. Compatibility identity only; no standalone server. Private screen memory: periodic screenshots of the user's own PC, OCR'd and searchable by text, app, window and time, stored only on the machine.",
+  "capabilities": [
+    "screen-history",
+    "screenshot-import",
+    "screenshot-folder-watch",
+    "imported-screenshots",
+    "ocr",
+    "timeline",
+    "full-text-search",
+    "visual-search",
+    "similar-frames",
+    "activity-by-app",
+    "recent-screen",
+    "pause",
+    "private-mode",
+    "exclusions",
+    "retention",
+    "delete-range"
+  ],
+  "placeholders": [
+    "ARGUS_DIR",
+    "APP_URL",
+    "TOKEN_FILE",
+    "PYTHON"
+  ],
   "defaults": {
-    "APP_URL": "http://127.0.0.1:5183",
+    "APP_URL": "http://127.0.0.1:5220/screen",
     "TOKEN_FILE": "{ARGUS_DIR}/data/mcp-token",
-    "PYTHON": "{ARGUS_DIR}/venv/Scripts/python.exe"
+    "PYTHON": "{ARGUS_DIR}/venv/Scripts/python.exe",
+    "TALOS_DIR": "{ARGUS_DIR}/../Talos's Hoard"
   },
   "app": {
-    "url_default": "http://127.0.0.1:5183",
-    "ui_url": "{APP_URL}",
-    "health": { "path": "/api/health", "expect": { "service": "argus-hoard" } },
-    "identify": { "service": ["argus-hoard"], "title": ["argus's hoard", "memoria de pantalla"] },
-    "launch_hint": {
-      "kind": "process",
-      "executable": "{PYTHON}",
-      "argv": ["-m", "argus"],
-      "cwd": "{ARGUS_DIR}",
-      "readiness": { "url": "{APP_URL}/api/health", "timeout_s": 30 }
+    "url_default": "http://127.0.0.1:5220/screen",
+    "ui_url": "http://127.0.0.1:5220/",
+    "health": {
+      "path": "/api/health",
+      "expect": {
+        "service": "argus-hoard"
+      }
+    },
+    "identify": {
+      "service": [
+        "argus-hoard"
+      ],
+      "title": [
+        "argus's hoard",
+        "memoria de pantalla"
+      ]
     }
   },
   "mcp": {
     "transport": "stdio",
-    "command": "{PYTHON}",
-    "args": ["{ARGUS_DIR}/mcp_server.py"],
-    "env": { "ARGUS_URL": "{APP_URL}", "ARGUS_TOKEN_FILE": "{TOKEN_FILE}" },
-    "optional_env": []
+    "command": "{TALOS_DIR}/.venv/Scripts/python.exe",
+    "args": [
+      "{TALOS_DIR}/mcp_server.py"
+    ],
+    "env": {
+      "TALOS_URL": "http://127.0.0.1:5220",
+      "TALOS_TOKEN_FILE": "{TALOS_DIR}/data/mcp-token"
+    },
+    "optional_env": [
+      "TALOS_DATA_DIR"
+    ]
   },
-  "notes": "Keep the app running (python -m argus) while the assistant uses it: the MCP bridge proxies every call to the local server and never opens the database. OCR text may contain recognition errors; the assistant should quote it as such.",
+  "notes": "Absorbed by Talos's Hoard: https://github.com/Luissalet/TalosHoard. Launch the merged app explicitly; this identity only preserves existing family calls and data. Keep the app running (python -m argus) while the assistant uses it: the MCP bridge proxies every call to the local server and never opens the database. OCR text may contain recognition errors; the assistant should quote it as such.",
   "x-family": {
-    "copilot": {"provider": "faustus", "contract": "1.0", "panel": "/api/copilot/panel.js", "context": ["frame", "session", "day", "search", "similar_search", "period", "settings", "exclusion", "editor"]}
+    "copilot": {
+      "provider": "faustus",
+      "contract": "1.0",
+      "panel": "/api/copilot/panel.js",
+      "context": [
+        "frame",
+        "session",
+        "day",
+        "search",
+        "similar_search",
+        "period",
+        "settings",
+        "exclusion",
+        "editor"
+      ]
+    },
+    "absorbed_by": {
+      "id": "talos",
+      "repository": "https://github.com/Luissalet/TalosHoard",
+      "module": "screen",
+      "standalone": false
+    }
   }
 }
